@@ -23,11 +23,13 @@ class Grid(object):
         self.eensgezins = float(0.6)
         self.bungalows = float(0.25)
         self.maisons = float(0.15)
-        buildings = []
+        self.buildings = []
         
     def findOverlap(self, building1, building2):
         return NotImplementedError
     def swapBuilding(self, building1, building2):
+        return NotImplementedError
+    def addBuilding(self, buildingtype):
         return NotImplementedError
     
 class Building(object):
