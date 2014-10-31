@@ -33,6 +33,7 @@ class Grid(object):
 class Building(object):
     def _init__(self, x, y):
         self.x = x
+        self.y = y
         self.width = 8
         self.depth = 8
         self.value = 285000
@@ -53,7 +54,8 @@ class Maison(Building):
         self.depth = float(10.5)
         self.value = 610000
         self.percentage = 6
-        self.vrijstand = 6      self.y = y
+        self.vrijstand = 6
+
     def getX(self):
         return self.x
     def getY(self):
