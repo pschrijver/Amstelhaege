@@ -1,5 +1,5 @@
 # Project programmeertheorie
-## Opgave AmstelHeage
+## Opgave AmstelHaege
 
 ![AmstelHaege](http://wiki.phoib.net/wiki/images/5/5c/Amstelhaege_k.jpg)
 
