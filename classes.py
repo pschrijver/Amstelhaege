@@ -82,9 +82,8 @@ class Grid(object):
         self.buildings = []
         
     def findOverlap(self, house1, house2):
-        """ Checks whether house1 and house2 overlap """
-        return self.cornerInBuilding(house1, house2) and \
-    self.cornerInBuilding(house2, house1)
+        """ Checks whether house1 and house2 overlap """        
+        return self.cornerInBuilding(house1, house2) or self.cornerInBuilding(house2, house1)
 
     def cornerInBuilding(self, house1, house2):
         """
@@ -93,13 +92,13 @@ class Grid(object):
 
         # Coordinates of all corners of house2
         corners = [(house2.x, house2.y)]
-        corners.append((house2.x + house2.depth * math.sin(house2.angle),
+        corners.append((house2.x - house2.depth * math.sin(house2.angle),
                    house2.y + house2.depth * math.cos(house2.angle)))
-        corners.append((house2.x + house2.depth * math.sin(house2.angle) + house2.width * math.cos(house2.angle),
-                   house2.y + house2.depth * math.cos(house2.angle) - house2.width * math.sin(house2.angle)))
+        corners.append((house2.x - house2.depth * math.sin(house2.angle) + house2.width * math.cos(house2.angle),
+                   house2.y + house2.depth * math.cos(house2.angle) + house2.width * math.sin(house2.angle)))
         corners.append((house2.x + house2.width * math.cos(house2.angle),
-                   house2.y - house2.width * math.sin(house2.angle)))
-
+                   house2.y + house2.width * math.sin(house2.angle)))
+        print corners
         rotCorners = []
         # rotate all corners by an angle -house1.angle, so that we can work in the
         # frame where house1 has angle 0
@@ -125,12 +124,12 @@ class Grid(object):
         for i in range(0, len(d)):
             # Positions of every corner of building2
             corners2 = [(d[i][1].x, d[i][1].y)]
-            corners2.append((d[i][1].x + d[i][1].depth * math.sin(d[i][1].angle),
+            corners2.append((d[i][1].x - d[i][1].depth * math.sin(d[i][1].angle),
                        d[i][1].y + d[i][1].depth * math.cos(d[i][1].angle)))
-            corners2.append((d[i][1].x + d[i][1].depth * math.sin(d[i][1].angle) + d[i][1].width * math.cos(d[i][1].angle),
-                       d[i][1].y + d[i][1].depth * math.cos(d[i][1].angle) - d[i][1].width * math.sin(d[i][1].angle)))
+            corners2.append((d[i][1].x - d[i][1].depth * math.sin(d[i][1].angle) + d[i][1].width * math.cos(d[i][1].angle),
+                       d[i][1].y + d[i][1].depth * math.cos(d[i][1].angle) + d[i][1].width * math.sin(d[i][1].angle)))
             corners2.append((d[i][1].x + d[i][1].width * math.cos(d[i][1].angle),
-                       d[i][1].y - d[i][1].width * math.sin(d[i][1].angle)))
+                       d[i][1].y + d[i][1].width * math.sin(d[i][1].angle)))
 
             rotCorners2 = []
 
@@ -286,7 +285,7 @@ class Maison(Building):
     def __init__(self, x, y):                
         self.x = x
         self.y = y
-        self.angle = 0
+        self.angle = - math.pi / 2 -0.2
         self.grid = Grid(100,100,2)
         self.width = 11
         self.depth = 10
@@ -297,16 +296,22 @@ class Maison(Building):
 
 #====================MAIN THREAD ===================================#
 if __name__ == '__main__':
-    b1 = EengezinsWoning(15,15)
-    b2 = Maison(3,3)
+    #b1 = EengezinsWoning(15,15)
+    #b2 = Maison(3,3)
+    #grid = Grid(100,100,2)
+    #grid.addBuilding(b1)
+    #grid.addBuilding(b2)
+    #print grid.buildings[0].x, grid.buildings[0].y
+
+    #print grid.findOverlap(b1,b2)
+    #print grid.findDistance(b1,b2)
+
+    b1 = EengezinsWoning(80,80)
+    b2 = Maison(77,82)
     grid = Grid(100,100,2)
     grid.addBuilding(b1)
     grid.addBuilding(b2)
-    print grid.buildings[0].x, grid.buildings[0].y
-
-    print grid.findOverlap(b1,b2)
-    print grid.findDistance(b1,b2)
-
+    print "Rotatie", grid.findOverlap(b2,b1)
     
 #    grid = Grid(120, 140, 60)
 #    grid.updateGrid()
