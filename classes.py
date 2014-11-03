@@ -10,14 +10,14 @@ import math
 class GridVisualisation:
     def __init__(self, width, height, buildings):
         "Initializes a visualization with the specified parameters."
-        self.max_dim = max(width, height)
+        self.max_dim = max(width / 1.5, height / 1.5)
         self.width = width
         self.height = height
         self.buildings = buildings
 
         # Initialize a drawing surface
         self.master = Tk()
-        self.w = Canvas(self.master, width=500, height=500)
+        self.w = Canvas(self.master, width=1000, height=1000)
         self.w.pack()
         self.master.update()
 
@@ -53,19 +53,19 @@ class GridVisualisation:
                                                            fill = "orange")
                 
         # Draw gridlines
-        for i in range(width + 1):
+        for i in range(self.width + 1):
             x1, y1 = self._map_coords(i, 0)
-            x2, y2 = self._map_coords(i, height)
+            x2, y2 = self._map_coords(i, self.height)
             self.w.create_line(x1, y1, x2, y2)
-        for i in range(height + 1):
+        for i in range(self.height + 1):
             x1, y1 = self._map_coords(0, i)
-            x2, y2 = self._map_coords(width, i)
+            x2, y2 = self._map_coords(self.width, i)
             self.w.create_line(x1, y1, x2, y2)
 
     def _map_coords(self, x, y):
         "Maps grid positions to window positions (in pixels)."
-        return (250 + 450 * ((x - self.width / 2.0) / self.max_dim),
-                250 + 450 * ((self.height / 2.0 - y) / self.max_dim))
+        return (550 + 450 * ((x - self.width / 2.0) / self.max_dim),
+                350 + 450 * ((self.height / 2.0 - y) / self.max_dim))
     
     def done(self):
         "Indicate that the animation is done so that we allow the user to close the window."
@@ -302,14 +302,14 @@ if __name__ == '__main__':
     grid = Grid(100,100,2)
     grid.addBuilding(b1)
     grid.addBuilding(b2)
-    print grid.buildings[0].x, grid.buildings[0].y
-
-    print grid.findOverlap(b1,b2)
-    print grid.findDistance(b1,b2)
+##    print grid.buildings[0].x, grid.buildings[0].y
+##
+##    print grid.findOverlap(b1,b2)
+##    print grid.findDistance(b1,b2)
 
     
-#    grid = Grid(120, 140, 60)
-#    grid.updateGrid()
+    grid = Grid(120, 140, 60)
+    grid.updateGrid()
 
 
 
