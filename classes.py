@@ -98,15 +98,17 @@ class Grid(object):
                    house2.y + house2.depth * math.cos(house2.angle) + house2.width * math.sin(house2.angle)))
         corners.append((house2.x + house2.width * math.cos(house2.angle),
                    house2.y + house2.width * math.sin(house2.angle)))
-        print corners
+        
         rotCorners = []
         # rotate all corners by an angle -house1.angle, so that we can work in the
         # frame where house1 has angle 0
         for corner in corners:
-            r = math.sqrt(corner[0]**2 + corner[1]**2)
-
-            rotCorners.append((r * math.cos(math.atan(corner[1] / corner[0]) - house1.angle), r * math.sin(math.atan(corner[1] / corner[0]) - house1.angle)))
-
+            r = math.sqrt((corner[0] - house1.x)**2 + (corner[1] - house1.y)**2)
+            theta = ((corner[1] - house1.y) / math.fabs(corner[1] - house1.y)) * math.acos((corner[0] - house1.x) / r)
+            
+            rotCorners.append((house1.x + r * math.cos(theta - house1.angle),\
+                               house1.y + r * math.sin(theta - house1.angle)))
+            
         # For every corner of house2 checks whether it lies inside house1
         for corner in rotCorners:
             if house1.x < corner[0] and corner[0] < house1.x + house1.width:
@@ -116,13 +118,15 @@ class Grid(object):
         return False
 
     def findDistance(self, building1, building2):
-        """ Searches for the shortest distances between building1 and building2 """
+        """ Searches for the shortest distances between building1 and building2.
+        The minimal required distance between buildings is not subtracted."""
 
         d = [(building1, building2), (building2, building1)]
         distancePerIteration = []
 
         for i in range(0, len(d)):
-            # Positions of every corner of building2
+            
+            # Coordinates of all corners of d[i][1]
             corners2 = [(d[i][1].x, d[i][1].y)]
             corners2.append((d[i][1].x - d[i][1].depth * math.sin(d[i][1].angle),
                        d[i][1].y + d[i][1].depth * math.cos(d[i][1].angle)))
@@ -132,13 +136,21 @@ class Grid(object):
                        d[i][1].y + d[i][1].width * math.sin(d[i][1].angle)))
 
             rotCorners2 = []
-
-            # rotate all corners by an angle -house1.angle, so that we can work in the
-            # frame where house1 has angle 0
+            print corners2
+            # rotate all corners by an angle -d[i][0].angle, so that we can work in the
+            # frame where d[i][0] has angle 0
             for corner in corners2:
-                r = math.sqrt(corner[0]**2 + corner[1]**2)
+                r = math.sqrt((corner[0] - d[i][0].x)**2 + (corner[1] - d[i][0].y)**2)
 
-                rotCorners2.append((r * math.cos(math.atan(corner[1] / corner[0]) - d[i][0].angle), r * math.sin(math.atan(corner[1] / corner[0]) - d[i][0].angle)))
+                try:
+                    sign = (corner[1] - d[i][0].y) / math.fabs(corner[1] - d[i][0].y)
+                except ZeroDivisionError:
+                    sign = 1
+                
+                theta = sign * math.acos((corner[0] - d[i][0].x) / r)
+                
+                rotCorners2.append((d[i][0].x + r * math.cos(theta - d[i][0].angle),\
+                                   d[i][0].y + r * math.sin(theta - d[i][0].angle)))
 
             # Positions of every corner of building1
             corners1 = [(d[i][0].x, d[i][0].y)]
@@ -261,10 +273,10 @@ class EengezinsWoning(Building):
     def __init__(self, x, y):
         self.x = x
         self.y = y
-        self.angle = 0
+        self.angle = (-57./360) * 2 * math.pi
         self.grid = Grid(100,100,2)
         self.width = 8
-        self.depth = 8  
+        self.depth = 8 
         self.value = 285000
         self.percentage = 1.03
         self.vrijstand = 2
@@ -273,10 +285,10 @@ class Bungalow(Building):
     def __init__(self, x, y):
         self.x = x
         self.y = y
-        self.angle = 0
+        self.angle = (-0./360)*2*math.pi
         self.grid = Grid(100,100,2)
         self.width = 10
-        self.depth = 8
+        self.depth = 7.5
         self.value = 399000
         self.percentage = 1.04
         self.vrijstand = 3
@@ -288,7 +300,7 @@ class Maison(Building):
         self.angle = - math.pi / 2 -0.2
         self.grid = Grid(100,100,2)
         self.width = 11
-        self.depth = 10
+        self.depth = 10.5
         self.value = 610000
         self.percentage = 1.06
         self.vrijstand = 6
@@ -306,20 +318,26 @@ if __name__ == '__main__':
     #print grid.findOverlap(b1,b2)
     #print grid.findDistance(b1,b2)
 
-    b1 = EengezinsWoning(80,80)
-    b2 = Maison(77,82)
-    grid = Grid(100,100,2)
-    grid.addBuilding(b1)
-    grid.addBuilding(b2)
-<<<<<<< HEAD
-    print "Rotatie", grid.findOverlap(b2,b1)
-=======
+    #b1 = EengezinsWoning(30,30)
+    #b2 = EengezinsWoning(55,35)
+    #grid = Grid(100,100,2)
+    #grid.addBuilding(b1)
+    #grid.addBuilding(b2)
+    #print grid.findDistance(b1, b2)
+    #print grid.findDistance(b2, b1)
+    
+    #print "Rotatie", grid.findOverlap(b1,b2)
+    #print grid.cornerInBuilding(b1,b2)
+    #print grid.cornerInBuilding(b2,b1)
+
+
+
 ##    print grid.buildings[0].x, grid.buildings[0].y
 ##
 ##    print grid.findOverlap(b1,b2)
 ##    print grid.findDistance(b1,b2)
 
->>>>>>> origin/master
+
     
     grid = Grid(120, 140, 60)
     grid.updateGrid()
