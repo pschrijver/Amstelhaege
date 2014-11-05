@@ -1,6 +1,7 @@
 from Tkinter import *
 import random
 import math
+import time
 
 # Uses code from the Robot assignment MIT
 
@@ -8,12 +9,16 @@ import math
 # Bungalows = Yellow
 # Maisons = Red
 class GridVisualisation:
-    def __init__(self, width, height, buildings):
+    def __init__(self, width, height, buildings, precision):
         "Initializes a visualization with the specified parameters."
-        self.max_dim = max(width / 1.5, height / 1.5)
-        self.width = width
-        self.height = height
+        # Adjust size of visualisation based on precision
+        self.max_dim = max(width / (precision * 1), height / (precision * 1))
+        self.delay = 0.01
+        self.width = width / precision
+        self.height = height / precision
         self.buildings = buildings
+        self.width = int(self.width)
+        self.height = int(self.height)
 
         # Initialize a drawing surface
         self.master = Tk()
@@ -23,7 +28,7 @@ class GridVisualisation:
 
         # Draw a backing and lines
         x1, y1 = self._map_coords(0, 0)
-        x2, y2 = self._map_coords(width, height)
+        x2, y2 = self._map_coords(self.width, self.height)
         self.w.create_rectangle(x1, y1, x2, y2, fill = "white")
 
         # Draw white squares for open fields
@@ -42,26 +47,47 @@ class GridVisualisation:
             x2, y2 = self._map_coords(i.getX() + i.getWidth(),i.getY()
                                       + i.getDepth())
 
-            if i.width == 11:
+            if i.width == 11 / precision:
                 self.tiles[(x1, y1)] = self.w.create_rectangle(x1, y1, x2, y2,
                                                            fill = "red")
-            if i.width == 8:
+            if i.width == 8 / precision:
                 self.tiles[(x1, y1)] = self.w.create_rectangle(x1, y1, x2, y2,
                                                            fill = "green")
-            if i.width == 10:
+            if i.width == 10 / precision:
                 self.tiles[(x1, y1)] = self.w.create_rectangle(x1, y1, x2, y2,
                                                            fill = "orange")
                 
-        # Draw gridlines
-        for i in range(self.width + 1):
-            x1, y1 = self._map_coords(i, 0)
-            x2, y2 = self._map_coords(i, self.height)
-            self.w.create_line(x1, y1, x2, y2)
-        for i in range(self.height + 1):
-            x1, y1 = self._map_coords(0, i)
-            x2, y2 = self._map_coords(self.width, i)
-            self.w.create_line(x1, y1, x2, y2)
+    def emptyAnimation(self):
+        for i in self.buildings:
+            x1 = i.getX()
+            y1 = i.getY()
+            x1, y1 = self._map_coords(x1, y1)
+            self.w.delete(self.tiles[(x1, y1)])
+            
+    def updateAnimation(self, precision, j):
+        "Updates the animation with a new list of buildings, for instance when"
+        " buildings have been moved, this can be useful"
+    
+        for i in self.buildings:
+            x1 = i.getX()
+            y1 = i.getY()
+            x1, y1 = self._map_coords(x1, y1)
+            x2, y2 = self._map_coords(i.getX() + i.getWidth(),i.getY()
+                                      + i.getDepth())
+    
+            if i.width == 11 / precision:
+                self.tiles[(x1, y1)] = self.w.create_rectangle(x1, y1, x2, y2,
+                                                           fill = "red")
+            if i.width == 8 / precision:
+                self.tiles[(x1, y1)] = self.w.create_rectangle(x1, y1, x2, y2,
+                                                           fill = "green")
+            if i.width == 10 / precision:
+                self.tiles[(x1, y1)] = self.w.create_rectangle(x1, y1, x2, y2,
+                                                         fill = "orange")
 
+        self.master.update()
+        time.sleep(self.delay)
+        
     def _map_coords(self, x, y):
         "Maps grid positions to window positions (in pixels)."
         return (550 + 450 * ((x - self.width / 2.0) / self.max_dim),
@@ -72,9 +98,9 @@ class GridVisualisation:
         mainloop()
 
 class Grid(object):
-    def __init__(self, width, depth, aantalhuizen):
-        self.width = width
-        self.depth = depth
+    def __init__(self, width, depth, aantalhuizen, precision):
+        self.width = width / precision
+        self.depth = depth / precision
         self.aantalhuizen = aantalhuizen
         self.eensgezins = float(0.6)
         self.bungalows = float(0.25)
@@ -98,7 +124,7 @@ class Grid(object):
                    house2.y + house2.depth * math.cos(house2.angle) + house2.width * math.sin(house2.angle)))
         corners.append((house2.x + house2.width * math.cos(house2.angle),
                    house2.y + house2.width * math.sin(house2.angle)))
-        print corners
+##        print corners
         rotCorners = []
         # rotate all corners by an angle -house1.angle, so that we can work in the
         # frame where house1 has angle 0
@@ -189,32 +215,32 @@ class Grid(object):
     # Starts a simulation with 60 Eengezinswoningen.
     # - Occupied_coords keeps track of all the coords the
     #   Eengezinswoningen occupy.
-    def updateGrid(self):
+    def updateGrid(self, precision):
         occupied_coords = []
         for i in range(1, self.aantalhuizen + 1):
             while True:
 
                 # Chooses the building type
-                if i <= 0.6 * self.aantalhuizen:
-                    ran_x = random.randrange(0,120 - 8)
-                    ran_y = random.randrange(0,140 - 8) 
-                    building = EengezinsWoning(ran_x, ran_y)
+                if i <= 0.4 * self.aantalhuizen:
+                    ran_x = random.randrange(0, self.width - (8 / precision))
+                    ran_y = random.randrange(0,self.depth - (8 / precision)) 
+                    building = EengezinsWoning(ran_x, ran_y, precision)
                 elif i > 0.6 * self.aantalhuizen and i <= 0.85 * \
                      self.aantalhuizen :
-                    ran_x = random.randrange(0,120 - 10)
-                    ran_y = random.randrange(0,140 - 8) 
-                    building = Bungalow(ran_x, ran_y)
+                    ran_x = random.randrange(0,self.width - (10 / precision))
+                    ran_y = random.randrange(0,self.depth - (8 / precision))
+                    building = Bungalow(ran_x, ran_y, precision)
                 else:
-                    ran_x = random.randrange(0,120 - 11)
-                    ran_y = random.randrange(0,140 - 10) 
-                    building = Maison(ran_x, ran_y)
+                    ran_x = random.randrange(0,self.width - (11 / precision))
+                    ran_y = random.randrange(0,self.depth - (10 / precision)) 
+                    building = Maison(ran_x, ran_y, precision)
    
                 # Gets all coordinates of the building and sees if any
                 # of the coords intersect with occupied_coords. Adds building
                 # if the intersection of the lists is empty.
                 coordinates = [(x,y) for x in range(ran_x, ran_x +
-                                                    building.width)
-                               for y in range(ran_y, ran_y + building.depth)]
+                                                    int(building.width))
+                               for y in range(ran_y, ran_y + int(building.depth))]
                 intersection = set(coordinates).intersection(occupied_coords)
                 
                 if not intersection:
@@ -223,8 +249,22 @@ class Grid(object):
                     occupied_coords += coordinates
                     break
 
-        # Creates the actual Grid        
-        anim = GridVisualisation(120,140, self.buildings)
+        # Creates the actual Grid
+        anim = GridVisualisation(30,30, self.buildings, precision)
+
+        #============= PATRICK -> ZIE DEZE SIMULATIE, GAAT NOG MIS BIJ HET BEREKEN VAN findDistance! ============#
+        for i in self.buildings:
+            anim.emptyAnimation()
+            for j in self.buildings:
+                if i != j:
+                    print
+                    print i,'naar', j
+                    print 'distance = ', self.findDistance(i,j)
+                    print 'building1', 'x =',i.getX(),  'y = ', i.getY()
+                    print 'building2: x =', j.getX(), 'y = ' , j.getY()    
+                    print
+           
+            anim.updateAnimation(precision,i)
         anim.done()
 
 
@@ -258,37 +298,37 @@ class Building(object):
 
 # !!!!!!!! x and y need to go to superclass, also add angle and grid !!!!!!!!!!!!!!!
 class EengezinsWoning(Building):
-    def __init__(self, x, y):
+    def __init__(self, x, y, precision):
         self.x = x
         self.y = y
         self.angle = 0
-        self.grid = Grid(100,100,2)
-        self.width = 8
-        self.depth = 8  
+##        self.grid = Grid(100,100,2)
+        self.width = 8 / precision
+        self.depth = 8 / precision 
         self.value = 285000
         self.percentage = 1.03
         self.vrijstand = 2
 
 class Bungalow(Building):
-    def __init__(self, x, y):
+    def __init__(self, x, y, precision):
         self.x = x
         self.y = y
         self.angle = 0
-        self.grid = Grid(100,100,2)
-        self.width = 10
-        self.depth = 8
+##        self.grid = Grid(100,100,2)
+        self.width = 10 / precision
+        self.depth = 8 / precision
         self.value = 399000
         self.percentage = 1.04
         self.vrijstand = 3
         
 class Maison(Building):
-    def __init__(self, x, y):                
+    def __init__(self, x, y, precision):                
         self.x = x
         self.y = y
         self.angle = - math.pi / 2 -0.2
-        self.grid = Grid(100,100,2)
-        self.width = 11
-        self.depth = 10
+##        self.grid = Grid(100,100,2)
+        self.width = 11 / precision
+        self.depth = 10 / precision
         self.value = 610000
         self.percentage = 1.06
         self.vrijstand = 6
@@ -306,23 +346,27 @@ if __name__ == '__main__':
     #print grid.findOverlap(b1,b2)
     #print grid.findDistance(b1,b2)
 
-    b1 = EengezinsWoning(80,80)
-    b2 = Maison(77,82)
-    grid = Grid(100,100,2)
-    grid.addBuilding(b1)
-    grid.addBuilding(b2)
-<<<<<<< HEAD
-    print "Rotatie", grid.findOverlap(b2,b1)
-=======
+##    b1 = EengezinsWoning(80,80)
+##    b2 = Maison(77,82)
+##    grid = Grid(100,100,2)
+##    grid.addBuilding(b1)
+##    grid.addBuilding(b2)
+##<<<<<<< HEAD
+##    print "Rotatie", grid.findOverlap(b2,b1)
+##=======
 ##    print grid.buildings[0].x, grid.buildings[0].y
 ##
 ##    print grid.findOverlap(b1,b2)
 ##    print grid.findDistance(b1,b2)
 
->>>>>>> origin/master
+##>>>>>>> origin/master
     
-    grid = Grid(120, 140, 60)
-    grid.updateGrid()
+##    grid = Grid(120, 140, 60)
+##    grid.updateGrid()
+        # Precision ratio to one meter. (0.5 is half meters, 0.1 is 10cm etc)
+    precision = 1.0
+    grid = Grid(30, 30, 3, precision)
+    grid.updateGrid(precision)
 
 
 
