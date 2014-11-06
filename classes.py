@@ -147,8 +147,8 @@ class Grid(object):
             
         # For every corner of house2 checks whether it lies inside house1
         for corner in rotCorners:
-            if house1.x < corner[0] and corner[0] < house1.x + house1.width:
-                if house1.y < corner[1] and corner[1] < house1.y + house1.depth:
+            if house1.x <= corner[0] and corner[0] <= house1.x + house1.width:
+                if house1.y <= corner[1] and corner[1] <= house1.y + house1.depth:
                     return True
 
         return False
