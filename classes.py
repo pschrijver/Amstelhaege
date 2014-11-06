@@ -427,9 +427,18 @@ if __name__ == '__main__':
 ##    grid = Grid(120, 140, 60)
 ##    grid.updateGrid()
         # Precision ratio to one meter. (0.5 is half meters, 0.1 is 10cm etc)
-    precision = 1.0
-    grid = Grid(30., 30., 3, precision)
-    grid.updateGrid(precision)
+##    precision = 1.0
+##    grid = Grid(30., 30., 3, precision)
+##    grid.updateGrid(precision)
+
+    # Says False but should be True 
+    b1 = Maison(43.,10.,1.)
+    b2 = Maison(45.,10.,1.)
+    grid = Grid(60.,60.,2.,1.)
+    grid.addBuilding(b1)
+    grid.addBuilding(b2)
+    print 'overlap', grid.findOverlap(b1,b2)
+    print 'distance', grid.findDistance(b1,b2)
 
 #    b1 = Maison(0.,7.,1.)
 #    b2 = EengezinsWoning(13,13,1.)
@@ -446,5 +455,3 @@ if __name__ == '__main__':
 #    grid.addBuilding(b2)
 #    print 'overlap', grid.findOverlap(b1,b2)
 #    print 'distance', grid.findDistance(b1,b2)
-
-        
