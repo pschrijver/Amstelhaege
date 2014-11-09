@@ -2,12 +2,19 @@ from Tkinter import *
 import random
 import math
 import time
+import csv
 
+
+file = open('results.csv', 'wb+')
+writer = csv.writer(file)
+writer.writerow(['Score', 'Prijs'])
 # Uses code from the Robot assignment MIT
 
 # Eengezinswoningen = red
 # Bungalows = blue
 # Maisons = black
+
+
 class GridVisualisation:
     def __init__(self, width, height, buildings):
         "Initializes a visualization with the specified parameters."
@@ -269,7 +276,7 @@ class Grid(object):
         self.randomPlacements()
         
         # Creates the Grid Animation
-        anim = GridVisualisation(self.width,self.depth, self.buildings)
+        # anim = GridVisualisation(self.width,self.depth, self.buildings)
         best_prijsverb = 0
         best_buildings = None
         
@@ -277,11 +284,14 @@ class Grid(object):
         # a randomly generated grid of buildings. Returns the building set-up
         # with the highest prijsverbetering.
         for simulation in range(simulations):
-            anim.emptyAnimation(self.buildings)
+            # anim.emptyAnimation(self.buildings)
             self.randomPlacements()
             
             # Calculates the prijsverb for all buildings.
             totalprijsverb = 0
+
+            distance = 0
+
             for building in self.buildings:
                 closest = float("inf")
                 # Finds the closest building.
@@ -293,19 +303,27 @@ class Grid(object):
                         # building.
                         if dist < closest:
                             closest = dist
-                            prijsverb = prijs 
+
+                            distance += closest
+
+                            prijsverb = prijs
                 totalprijsverb += prijsverb
+
 
             # Remembers the best prijsverb.
             if totalprijsverb > best_prijsverb:
                 best_prijsverb = totalprijsverb
                 best_buildings = self.buildings
-                
-            anim.updateAnimation(self.buildings, totalprijsverb)
+
+            writer.writerow([distance, totalprijsverb])
+
+            # anim.updateAnimation(self.buildings, totalprijsverb)
 
         # Shows the best prijsverb.    
-        anim.emptyAnimation(self.buildings)
-        anim.updateAnimation(best_buildings, best_prijsverb)
+        #anim.emptyAnimation(self.buildings)
+        #anim.updateAnimation(best_buildings, best_prijsverb)
+
+
 
         # Returns the best prijsverb.
         return best_buildings, int(best_prijsverb)
@@ -420,8 +438,8 @@ class Maison(Building):
 if __name__ == '__main__':
     precision = 1.0
     grid = Grid(120., 160., 20)
-    simulations = 10
-    print grid.updateGrid(simulations)
+    simulations = 100
+    grid.updateGrid(simulations)
 
     # ====== TEST RUNS ======= #
     #b1 = EengezinsWoning(15,15)
