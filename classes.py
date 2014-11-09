@@ -48,7 +48,7 @@ class GridVisualisation:
         x2, y2 = self._map_coords(self.width, self.height)
         self.w.create_rectangle(x1, y1, x2, y2, fill = "white")
             
-    def updateAnimation(self, buildings, distance):
+    def updateAnimation(self, buildings, prijsverb):
         " Updates the animation with a new list of buildings, for instance when"
         " buildings have been moved, this can be useful"
         for i in buildings:
@@ -77,8 +77,8 @@ class GridVisualisation:
                   self.w.create_polygon(points,
                             fill='blue')
                   self.w.create_text((x1+19,y1-17), fill="white", text="score", font=("arial",8))
-        distance = 'Totale vrijstand = ' + str(int(distance)) + 'm'
-        self.w.create_text(20,20, anchor=W, font='arial', text=distance)
+        prijsverb = 'Prijsverbetering = ' + str(int(prijsverb)) + ' euro'
+        self.w.create_text(20,20, anchor=W, font='arial', text=prijsverb)
 
         self.master.update()
         time.sleep(self.delay)
@@ -265,52 +265,51 @@ class Grid(object):
 
     # Initializes the grid with non overlapping buildings, at random positions.
     def updateGrid(self, simulations):
+        
         self.randomPlacements()
         
         # Creates the Grid Animation
         anim = GridVisualisation(self.width,self.depth, self.buildings)
-        best_distance = 0
+        best_prijsverb = 0
         best_buildings = None
         
-        # Starts the simulation, updates the image. Shows the buildings, plus
-        # the total 'vrijstand' of all buildings (useful for further calculations)
+        # Starts the simulation for calculating the prijsverbetering for
+        # a randomly generated grid of buildings. Returns the building set-up
+        # with the highest prijsverbetering.
         for simulation in range(simulations):
             anim.emptyAnimation(self.buildings)
             self.randomPlacements()
             
-            # Calculates the total 'vrijstand' of all buildings.
-            distance = 0
+            # Calculates the prijsverb for all buildings.
+            totalprijsverb = 0
             for building in self.buildings:
                 closest = float("inf")
-                # Finds the closest building
+                # Finds the closest building.
                 for otherbuilding in self.buildings:
                     if building != otherbuilding:
                         dist = self.findDistance(building, otherbuilding)
+                        prijs = building.calculatePrice(building, dist)
+                        # Changes the prijsverb to the value of the closest
+                        # building.
                         if dist < closest:
-                            closest = dist 
-                distance += closest
+                            closest = dist
+                            prijsverb = prijs 
+                totalprijsverb += prijsverb
 
-            if distance > best_distance:
-                best_distance = distance
+            # Remembers the best prijsverb.
+            if totalprijsverb > best_prijsverb:
+                best_prijsverb = totalprijsverb
                 best_buildings = self.buildings
                 
-            anim.updateAnimation(self.buildings, distance)
-            
+            anim.updateAnimation(self.buildings, totalprijsverb)
+
+        # Shows the best prijsverb.    
         anim.emptyAnimation(self.buildings)
-        anim.updateAnimation(best_buildings, best_distance)
+        anim.updateAnimation(best_buildings, best_prijsverb)
 
-        # Returns the setup of the instance with best_distance
-        return best_buildings, best_distance
-
-    def calculatePrice(self, building, distance):
-        """ Calculates the price of a single house.
-        @distance is total 'vrijstand' of that house. """
-        extravrijstand = distance - building.vrijstand
-        prijsverb = (building.percentage * extravrijstand) / 100 + 1
-        huisprijs = building.value * prijsverb
-
-        return float(huisprijs)
-    
+        # Returns the best prijsverb.
+        return best_buildings, int(best_prijsverb)
+ 
     
 class Building(object):
     def __init__(self):
@@ -355,6 +354,15 @@ class EengezinsWoning(Building):
         self.percentage = 3
         self.vrijstand = 2
 
+    def calculatePrice(self, building, distance):
+        """ Calculates the price of a single house.
+        @distance is total 'vrijstand' of that house. """
+        extravrijstand = distance - building.vrijstand
+        prijsverb = (building.percentage * extravrijstand) / 100 + 1
+        huisprijs = building.value * prijsverb
+
+        return float(huisprijs)
+
 class Bungalow(Building):
     def __init__(self, x, y):
         self.name = 'bungalow'
@@ -369,6 +377,15 @@ class Bungalow(Building):
         self.value = 399000
         self.percentage = 4
         self.vrijstand = 3
+        
+    def calculatePrice(self, building, distance):
+        """ Calculates the price of a single house.
+        @distance is total 'vrijstand' of that house. """
+        extravrijstand = distance - building.vrijstand
+        prijsverb = (building.percentage * extravrijstand) / 100 + 1
+        huisprijs = building.value * prijsverb
+
+        return float(huisprijs)
         
 class Maison(Building):
     def __init__(self, x, y):
@@ -388,13 +405,22 @@ class Maison(Building):
         self.value = 610000
         self.percentage = 6
         self.vrijstand = 6
+        
+    def calculatePrice(self, building, distance):
+        """ Calculates the price of a single house.
+        @distance is total 'vrijstand' of that house. """
+        extravrijstand = distance - building.vrijstand
+        prijsverb = (building.percentage * extravrijstand) / 100 + 1
+        huisprijs = building.value * prijsverb
+
+        return float(huisprijs)
 
 
 #====================MAIN THREAD ===================================#
 if __name__ == '__main__':
     precision = 1.0
     grid = Grid(120., 160., 20)
-    simulations = 2000
+    simulations = 10
     print grid.updateGrid(simulations)
 
     # ====== TEST RUNS ======= #
