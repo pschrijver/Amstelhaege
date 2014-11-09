@@ -301,6 +301,16 @@ class Grid(object):
 
         # Returns the setup of the instance with best_distance
         return best_buildings, best_distance
+
+    def calculatePrice(self, building, distance):
+        """ Calculates the price of a single house.
+        @distance is total 'vrijstand' of that house. """
+        extravrijstand = distance - building.vrijstand
+        prijsverb = (building.percentage * extravrijstand) / 100 + 1
+        huisprijs = building.value * prijsverb
+
+        return float(huisprijs)
+    
     
 class Building(object):
     def __init__(self):
@@ -342,7 +352,7 @@ class EengezinsWoning(Building):
         self.angle = 0
 ##        self.grid = Grid(100,100,2)
         self.value = 285000
-        self.percentage = 1.03
+        self.percentage = 3
         self.vrijstand = 2
 
 class Bungalow(Building):
@@ -357,7 +367,7 @@ class Bungalow(Building):
         self.angle = 0
 ##        self.grid = Grid(100,100,2)
         self.value = 399000
-        self.percentage = 1.04
+        self.percentage = 4
         self.vrijstand = 3
         
 class Maison(Building):
@@ -376,7 +386,7 @@ class Maison(Building):
         #self.depth = 10 / precision
 
         self.value = 610000
-        self.percentage = 1.06
+        self.percentage = 6
         self.vrijstand = 6
 
 
