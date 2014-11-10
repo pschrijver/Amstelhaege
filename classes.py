@@ -287,7 +287,7 @@ class Grid(object):
         self.randomPlacements()
         
         # Creates the Grid Animation
-##        anim = GridVisualisation(self.width,self.depth, self.buildings)
+        anim = GridVisualisation(self.width,self.depth, self.buildings, 0)
         best_buildings = None
         best_prijsverb = 0
         
@@ -295,7 +295,7 @@ class Grid(object):
         # a randomly generated grid of buildings. Returns the building set-up
         # with the highest prijsverbetering.
         for simulation in range(simulations):
-##            anim.emptyAnimation(self.buildings)
+            anim.emptyAnimation(self.buildings)
             self.randomPlacements()
             
             # Calculates the prijsverb for all buildings.
@@ -322,10 +322,10 @@ class Grid(object):
                 best_prijsverb = totalprijsverb
                 best_buildings = self.buildings
 
-            if simulation % 100 == 0:
+            if simulation % 10 == 0:
                 print 'We ran: ' ,simulation, 'simulations'
                 
-##            anim.updateAnimation(self.buildings, totalprijsverb)
+            anim.updateAnimation(self.buildings, totalprijsverb)
                 
         anim = GridVisualisation(self.width,self.depth, best_buildings, best_prijsverb)
         writer.writerow([distance, best_prijsverb])
@@ -449,8 +449,8 @@ if __name__ == '__main__':
     writer.writerow(['Distance', 'Prijs'])
     
     precision = 1.0
-    grid = Grid(120., 160., 20)
-    simulations = 10
+    grid = Grid(120., 160., 60)
+    simulations = 100000
     grid.updateGrid(simulations)
 
     # ====== TEST RUNS ======= #
