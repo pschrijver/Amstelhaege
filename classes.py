@@ -3,20 +3,13 @@ import random
 import math
 import time
 import csv
-
-
-file = open('results.csv', 'wb+')
-writer = csv.writer(file)
-writer.writerow(['Score', 'Prijs'])
 # Uses code from the Robot assignment MIT
 
 # Eengezinswoningen = red
 # Bungalows = blue
 # Maisons = black
-
-
 class GridVisualisation:
-    def __init__(self, width, height, buildings):
+    def __init__(self, width, height, buildings, prijsverb):
         "Initializes a visualization with the specified parameters."
         # Adjust size of visualisation based on precision
         self.max_dim = max(width / (precision * 1.5), height / (precision * 1.5))
@@ -47,7 +40,8 @@ class GridVisualisation:
 ##                x2, y2 = self._map_coords(i + 1, j + 1)
 ##                self.tiles[(i, j)] = self.w.create_rectangle(x1, y1, x2, y2,
 ##                                                            fill = "white")
-        self.updateAnimation(self.buildings, distance)
+
+        self.updateAnimation(self.buildings, '{:5,.2f}'.format(prijsverb))
                 
     def emptyAnimation(self, buildings):
         self.w.delete('all')
@@ -71,7 +65,7 @@ class GridVisualisation:
                        i.y + i.width * math.sin(i.angle))
             
             points = [x1, y1, x2, y2, x3, y3, x4, y4]
-
+        
             if i.name == 'maison':
                   self.w.create_polygon(points, 
                             fill='black')
@@ -84,7 +78,7 @@ class GridVisualisation:
                   self.w.create_polygon(points,
                             fill='blue')
                   self.w.create_text((x1+19,y1-17), fill="white", text="score", font=("arial",8))
-        prijsverb = 'Prijsverbetering = ' + str(int(prijsverb)) + ' euro'
+        prijsverb = 'Prijsverbetering = ' + str(prijsverb) + ' euro'
         self.w.create_text(20,20, anchor=W, font='arial', text=prijsverb)
 
         self.master.update()
@@ -109,10 +103,19 @@ class Grid(object):
         self.maisons = float(0.15)
         self.buildings = []
 
+    def vrijstandMuren(self, house1):
+           if house1.x - house1.vrijstand >= 0 and house1.x + house1.vrijstand + house1.width <= self.width and \
+               house1.y - house1.vrijstand >= 0 and house1.y + house1.vrijstand + house1.depth <= self.depth:
+               return True
+            
     def findOverlap(self, house1, house2):
-        """ Checks whether house1 and house2 overlap """        
-        return self.cornerInBuilding(house1, house2) or self.cornerInBuilding(house2, house1)
-
+        """ Checks whether house1 and house2 overlap and makes sure there is enough vrijstand """
+        if self.findDistance(house1, house2) >= house1.vrijstand and \
+           self.findDistance(house1, house2) >= house2.vrijstand:
+            return self.cornerInBuilding(house1, house2) or self.cornerInBuilding(house2, house1)
+        else:
+            return True
+    
     def cornerInBuilding(self, house1, house2):
         """
         Checks whether a corner of house2 lies inside house1
@@ -159,7 +162,7 @@ class Grid(object):
         """ Searches for the shortest distances between building1 and building2.
         The minimal required distance between buildings is not subtracted."""
 
-        assert(self.findOverlap(building1, building2) == False), 'Buildings overlap'
+##        assert(self.findOverlap(building1, building2) == False), 'Buildings overlap'
         
         d = [(building1, building2), (building2, building1)]
         distancePerIteration = []
@@ -241,32 +244,40 @@ class Grid(object):
 
     def randomPlacements(self):
         self.buildings = []
+##        anim = GridVisualisation(self.width,self.depth, self.buildings)
         for i in range(1, self.aantalhuizen + 1):
-            while True:  
+##            anim.emptyAnimation(self.buildings)
+            trials = 0
+            while True:
+                trials += 1
                 overlap = False
                 # Chooses the building type and creates a random position
                  # Chooses the building type
-                if i <= 0.6 * self.aantalhuizen:
+                if i > 0.4 * self.aantalhuizen:
                     ran_x = random.randrange(0,self.width - 8)
                     ran_y = random.randrange(0,self.depth - 8) 
                     building = EengezinsWoning(ran_x, ran_y)
-                elif i > 0.6 * self.aantalhuizen and i <= 0.85 * \
+                elif i > 0.15 * self.aantalhuizen and i <= 0.4 * \
                      self.aantalhuizen :
                     ran_x = random.randrange(0,self.width - 10)
                     ran_y = random.randrange(0,self.depth - 8) 
                     building = Bungalow(ran_x, ran_y)
                 else:
-                    ran_x = random.randrange(0,self.width - 11)
+                    ran_x = random.randrange(0,self.width - 11 )
                     ran_y = random.randrange(0,self.depth - 10) 
                     building = Maison(ran_x, ran_y)
                 # Checks if building overlaps with another building.
-                for b in self.buildings:
-                    if self.findOverlap(b, building):
-                        overlap = True
+                if self.vrijstandMuren(building):
+                    for b in self.buildings:
+                        if self.findOverlap(building, b ):
+                            overlap = True
+                            break
+                    if not overlap:
+                        self.addBuilding(building)
+##                        anim.updateAnimation(self.buildings, 0)
+##                        print i, trials
                         break
-                if not overlap:
-                    self.addBuilding(building)
-                    break
+                
 ##                print len(self.buildings)
             
 
@@ -276,22 +287,20 @@ class Grid(object):
         self.randomPlacements()
         
         # Creates the Grid Animation
-        # anim = GridVisualisation(self.width,self.depth, self.buildings)
-        best_prijsverb = 0
+##        anim = GridVisualisation(self.width,self.depth, self.buildings)
         best_buildings = None
+        best_prijsverb = 0
         
         # Starts the simulation for calculating the prijsverbetering for
         # a randomly generated grid of buildings. Returns the building set-up
         # with the highest prijsverbetering.
         for simulation in range(simulations):
-            # anim.emptyAnimation(self.buildings)
+##            anim.emptyAnimation(self.buildings)
             self.randomPlacements()
             
             # Calculates the prijsverb for all buildings.
             totalprijsverb = 0
-
             distance = 0
-
             for building in self.buildings:
                 closest = float("inf")
                 # Finds the closest building.
@@ -303,30 +312,29 @@ class Grid(object):
                         # building.
                         if dist < closest:
                             closest = dist
-
-                            distance += closest
-
-                            prijsverb = prijs
+                            prijsverb = prijs 
                 totalprijsverb += prijsverb
-
-
+                distance += closest
+                
+##            print distance, totalprijsverb
             # Remembers the best prijsverb.
             if totalprijsverb > best_prijsverb:
                 best_prijsverb = totalprijsverb
                 best_buildings = self.buildings
 
-            writer.writerow([distance, totalprijsverb])
-
-            # anim.updateAnimation(self.buildings, totalprijsverb)
-
+            if simulation % 100 == 0:
+                print 'We ran: ' ,simulation, 'simulations'
+                
+##            anim.updateAnimation(self.buildings, totalprijsverb)
+                
+        anim = GridVisualisation(self.width,self.depth, best_buildings, best_prijsverb)
+        writer.writerow([distance, best_prijsverb])
         # Shows the best prijsverb.    
-        #anim.emptyAnimation(self.buildings)
-        #anim.updateAnimation(best_buildings, best_prijsverb)
+##        anim.emptyAnimation(self.buildings)
+##        anim.updateAnimation(best_buildings, best_prijsverb)
 
-
-
-        # Returns the best prijsverb.
-        return best_buildings, int(best_prijsverb)
+        # Returns the best building setup + it's prijsverb + it's distance
+        return best_buildings, int(best_prijsverb), distance
  
     
 class Building(object):
@@ -436,9 +444,13 @@ class Maison(Building):
 
 #====================MAIN THREAD ===================================#
 if __name__ == '__main__':
+    file = open('results.csv', 'wb+')
+    writer = csv.writer(file)
+    writer.writerow(['Distance', 'Prijs'])
+    
     precision = 1.0
     grid = Grid(120., 160., 20)
-    simulations = 100
+    simulations = 10
     grid.updateGrid(simulations)
 
     # ====== TEST RUNS ======= #
@@ -470,7 +482,8 @@ if __name__ == '__main__':
     #grid.addBuilding(b1)
     #grid.addBuilding(b2)
     #print 'overlap', grid.findOverlap(b1,b2)
-    #print 'distance', grid.findDistance(b1,b2)
+    #
+##    'distance', grid.findDistance(b1,b2)
 
 
 ##    b1 = EengezinsWoning(80,80)
