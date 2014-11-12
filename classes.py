@@ -1,4 +1,5 @@
 from Tkinter import *
+import matplotlib.pyplot as plt
 import random
 import math
 import time
@@ -13,7 +14,7 @@ class GridVisualisation:
         "Initializes a visualization with the specified parameters."
         # Adjust size of visualisation based on precision
         self.max_dim = max(width / (precision * 1.5), height / (precision * 1.5))
-        self.delay = 0.001
+        self.delay = 0.00000001
         self.width = width
         self.height = height
         self.buildings = buildings
@@ -53,9 +54,7 @@ class GridVisualisation:
         " Updates the animation with a new list of buildings, for instance when"
         " buildings have been moved, this can be useful"
         for i in buildings:
-            x1 = i.getX()
-            y1 = i.getY()
-
+            
             x1, y1 = self._map_coords(i.x, i.y)
             x2, y2 = self._map_coords(i.x - i.depth * math.sin(i.angle),
                        i.y + i.depth * math.cos(i.angle))
@@ -65,7 +64,8 @@ class GridVisualisation:
                        i.y + i.width * math.sin(i.angle))
             
             points = [x1, y1, x2, y2, x3, y3, x4, y4]
-        
+
+            
             if i.name == 'maison':
                   self.w.create_polygon(points, 
                             fill='black')
@@ -103,6 +103,46 @@ class Grid(object):
         self.maisons = float(0.15)
         self.buildings = []
 
+    def findOverlap2(self, building):
+        """
+        Calculates whether a building has overlap with another building on the
+        grid and if the building has a distant > vrijstand from the edges of the
+        grid
+        """
+
+        corners = [(building.x, building.y)]
+        corners.append((building.x - building.depth * math.sin(building.angle),
+                   building.y + building.depth * math.cos(building.angle)))
+        corners.append((building.x - building.depth * math.sin(building.angle) + building.width * math.cos(building.angle),
+                   building.y + building.depth * math.cos(building.angle) + building.width * math.sin(building.angle)))
+        corners.append((building.x + building.width * math.cos(building.angle),
+                   building.y + building.width * math.sin(building.angle)))
+
+        for x, y in corners:
+            if x < building.vrijstand or y < building.vrijstand:
+                return True
+            elif x > self.width - building.vrijstand or y > self.depth - building.vrijstand:
+                return True
+        i = 0
+        buildingOverlap = False
+
+        shortestDist = float('inf')
+        diagonal = math.sqrt(building.width**2 + building.depth**2) + math.sqrt(11**2 + 10.5**2)
+        for neighbor in self.buildings:
+            dist = math.sqrt((building.x - neighbor.x)**2 + (building.y - neighbor.y)**2)
+            if dist < shortestDist:
+                shortestDist = dist
+        shortestDist = shortestDist + diagonal
+        
+        while i < len(self.buildings) and not buildingOverlap:
+            dist = math.sqrt((building.x - self.buildings[i].x)**2 + (building.y - self.buildings[i].y)**2)
+            
+            if building != self.buildings[i] and dist <= shortestDist:
+                buildingOverlap = self.findOverlap(building, self.buildings[i])
+            i += 1
+
+        return buildingOverlap
+    
     def vrijstandMuren(self, house1):
            if house1.x - house1.vrijstand >= 0 and house1.x + house1.vrijstand + house1.width <= self.width and \
                house1.y - house1.vrijstand >= 0 and house1.y + house1.vrijstand + house1.depth <= self.depth:
@@ -242,6 +282,59 @@ class Grid(object):
     def addBuilding(self, building):
         return self.buildings.append(building)
 
+    def findShortestDist(self, building):
+        """
+        Finds shortest distance from var building to another building. Returns
+        this value
+        """
+
+        # Choose a distance that overestimates any possible distance
+        shortestDist = math.sqrt(self.width**2 + self.depth**2)
+
+        maxDist = float('inf')
+        diagonal = math.sqrt(building.width**2 + building.depth**2) + math.sqrt(11**2 + 10.5**2)
+        for neighbor in self.buildings:
+            dist = math.sqrt((building.x - neighbor.x)**2 + (building.y - neighbor.y)**2)
+            if dist < maxDist:
+                maxDist = dist
+        maxDist += diagonal
+
+        for neighbor in self.buildings:
+            dist = math.sqrt((building.x - neighbor.x)**2 + (building.y - neighbor.y)**2)
+            
+            if building != neighbor and dist < maxDist:
+                newDist = self.findDistance(building, neighbor)
+                if newDist < shortestDist:
+                    shortestDist = newDist
+
+        return shortestDist
+    
+
+    def calcPrice(self, building):
+        """
+        Calculate the price of a single house. Returns the price and the vrijstand
+        """
+        extravrijstand = self.findShortestDist(building) - building.vrijstand
+        prijsverb = building.percentage * extravrijstand + 1
+        huisprijs = building.value * prijsverb
+
+        return float(huisprijs), float(extravrijstand)
+
+    def calcTotalPrice(self):
+        """
+        Calculates the total price for all buildings on the grid and the total
+        vrijstand.
+        """
+        totalPrice = 0
+        totalExtraVrijstand = 0
+
+        for building in self.buildings:
+            priceAndVrijstand = self.calcPrice(building)
+            totalPrice += priceAndVrijstand[0]
+            totalExtraVrijstand += priceAndVrijstand[1]
+
+        return totalPrice, totalExtraVrijstand
+    
     def randomPlacements(self):
         self.buildings = []
 ##        anim = GridVisualisation(self.width,self.depth, self.buildings)
@@ -255,17 +348,18 @@ class Grid(object):
                  # Chooses the building type
                 if i > 0.4 * self.aantalhuizen:
                     ran_x = random.randrange(0,self.width - 8)
-                    ran_y = random.randrange(0,self.depth - 8) 
-                    building = EengezinsWoning(ran_x, ran_y)
+                    ran_y = random.randrange(0,self.depth - 8)
+                    ran_angle = random.randrange(0,360)
+                    building = EengezinsWoning(ran_x, ran_y, 0, self.width, self.depth)
                 elif i > 0.15 * self.aantalhuizen and i <= 0.4 * \
                      self.aantalhuizen :
                     ran_x = random.randrange(0,self.width - 10)
                     ran_y = random.randrange(0,self.depth - 8) 
-                    building = Bungalow(ran_x, ran_y)
+                    building = Bungalow(ran_x, ran_y, 0, self.width, self.depth)
                 else:
                     ran_x = random.randrange(0,self.width - 11 )
                     ran_y = random.randrange(0,self.depth - 10) 
-                    building = Maison(ran_x, ran_y)
+                    building = Maison(ran_x, ran_y, 0, self.width, self.depth)
                 # Checks if building overlaps with another building.
                 if self.vrijstandMuren(building):
                     for b in self.buildings:
@@ -277,8 +371,58 @@ class Grid(object):
 ##                        anim.updateAnimation(self.buildings, 0)
 ##                        print i, trials
                         break
-                
+
 ##                print len(self.buildings)
+                
+    def randomPlacements2(self):
+        self.buildings = []
+
+        trials = 0
+
+        noConfiguration = True
+
+        while noConfiguration:
+            self. buildings = []
+
+            trials += 1
+
+            if trials % 1 == 0:
+                print trials
+
+            overlap = False
+            i = 0
+            randomTries = 0
+            while i < self.aantalhuizen and randomTries < 1000:
+                if i < .15 * self.aantalhuizen:
+                    ran_x = random.random() * (self.width - 11)
+                    ran_y = random.random() * (self.depth - 10.5)
+                    ran_angle = 0##random.randrange(0,360)
+                    building = Maison(ran_x, ran_y, ran_angle, self.width, self.depth)
+                elif i < .4 * self.aantalhuizen:
+                    ran_x = random.random() * (self.width - 10)
+                    ran_y = random.random() * (self.depth - 7.5)
+                    ran_angle = 0##random.randrange(0,360)
+                    building = Bungalow(ran_x, ran_y, ran_angle, self.width, self.depth)
+                else:
+                    ran_x = random.random() * (self.width - 8)
+                    ran_y = random.random() * (self.depth - 8)
+                    ran_angle = 0##random.randrange(0,360)
+                    building = EengezinsWoning(ran_x, ran_y, ran_angle, self.width, self.depth)
+
+                overlap = self.findOverlap2(building)
+
+                if not overlap:
+                    self.buildings.append(building)
+                    i += 1
+                    randomTries = 0
+                else:
+                    randomTries += 1
+
+            noConfiguration = overlap
+        ##anim = GridVisualisation(self.width,self.depth, self.buildings, 0)
+        ##anim.emptyAnimation(self.buildings)
+        ##anim.updateAnimation(self.buildings, 0)
+        ##print trials
             
 
     # Initializes the grid with non overlapping buildings, at random positions.
@@ -287,7 +431,7 @@ class Grid(object):
         self.randomPlacements()
         
         # Creates the Grid Animation
-        anim = GridVisualisation(self.width,self.depth, self.buildings, 0)
+        anim = GridVisualisation(self.width, self.depth, self.buildings, 0)
         best_buildings = None
         best_prijsverb = 0
         
@@ -297,26 +441,13 @@ class Grid(object):
         for simulation in range(simulations):
             anim.emptyAnimation(self.buildings)
             self.randomPlacements()
-            
-            # Calculates the prijsverb for all buildings.
-            totalprijsverb = 0
-            distance = 0
-            for building in self.buildings:
-                closest = float("inf")
-                # Finds the closest building.
-                for otherbuilding in self.buildings:
-                    if building != otherbuilding:
-                        dist = self.findDistance(building, otherbuilding)
-                        prijs = building.calculatePrice(building, dist)
-                        # Changes the prijsverb to the value of the closest
-                        # building.
-                        if dist < closest:
-                            closest = dist
-                            prijsverb = prijs 
-                totalprijsverb += prijsverb
-                distance += closest
+
+
+            # Calculates the total prijsverb for all buildings.
+            totalPrice = self.calcTotalPrice()
+            totalprijsverb = totalPrice[0]
+            distance = totalPrice[1]
                 
-##            print distance, totalprijsverb
             # Remembers the best prijsverb.
             if totalprijsverb > best_prijsverb:
                 best_prijsverb = totalprijsverb
@@ -335,11 +466,89 @@ class Grid(object):
 
         # Returns the best building setup + it's prijsverb + it's distance
         return best_buildings, int(best_prijsverb), distance
- 
-    
+
+def translatingRandomSample(aantalhuizen, gridWidth, gridDepth, step):
+    grid = Grid(gridWidth, gridDepth, aantalhuizen)
+    grid.randomPlacements2()
+
+    previousPrice = -1
+    totalPrice = grid.calcTotalPrice()[0]
+    priceDevelopment = [totalPrice]
+
+    anim = GridVisualisation(gridWidth, gridDepth, grid.buildings, 0)
+    anim.emptyAnimation(grid.buildings)
+
+    i = 0
+    while totalPrice - previousPrice > 100:
+        print i, totalPrice - previousPrice
+
+        if i%1==0:
+            anim.emptyAnimation(grid.buildings)
+            anim.updateAnimation(grid.buildings, 0)
+        previousPrice = grid.calcTotalPrice()[0]
+
+        for building in grid.buildings:
+
+            # Try to move to the right
+            building.translate(step, 0)
+            if not grid.findOverlap2(building):
+                right = grid.calcTotalPrice()[0]
+            else:
+                right = -1
+
+            # Move back and move one up
+            building.translate(-step, step)
+            if not grid.findOverlap2(building):
+                up = grid.calcTotalPrice()[0]
+            else:
+                up = -1
+
+            # Move back and move to the left
+            building.translate(-step, -step)
+            if not grid.findOverlap2(building):
+                left = grid.calcTotalPrice()[0]
+            else:
+                left = -1
+
+            # Move back and move down
+            building.translate(step, -step)
+            if not grid.findOverlap2(building):
+                down = grid.calcTotalPrice()[0]
+            else:
+                down = -1
+            
+            building.translate(0, step)
+
+            if right > totalPrice or up > totalPrice or left > totalPrice or down > totalPrice:
+                if right > up and right > left and right > down:
+                    building.translate(step, 0)
+                elif up > left and up > down:
+                    building.translate(0, step)
+                elif left > down:
+                    building.translate(-step, 0)
+                else:
+                    building.translate(0, -step)
+
+                totalPrice = grid.calcTotalPrice()[0]
+        priceDevelopment.append(totalPrice)
+        i += 1
+
+
+    iterations = [x for x in xrange(len(priceDevelopment))]
+    plt.plot(iterations, priceDevelopment)
+    plt.show()
+
+    anim.emptyAnimation(grid.buildings)
+    anim.updateAnimation(grid.buildings, 0)
+    return priceDevelopment
+
 class Building(object):
-    def __init__(self):
-        pass
+    def __init__(self, x, y, angle, gridWidth, gridDepth):
+        self.x = x
+        self.y = y
+        self.angle = angle * 2 * math.pi / 360
+        self.gridWidth = gridWidth
+        self.gridDepth = gridDepth
 
     def getX(self):
         return self.x
@@ -353,8 +562,8 @@ class Building(object):
         return self.depth
     def randomPosition(self):
         # Places the building at a random place on the grid
-        self.x = random.random() * (self.grid.width - self.width)
-        self.y = random.random() * (self.grid.depth - self.depth)
+        self.x = random.random() * self.gridWidth
+        self.y = random.random() * self.gridDepth
         self.angle = random.random() * 2 * math.pi
     def translate(self, dx, dy):
         # Translate building to place (x + dx, y + dy)
@@ -365,93 +574,69 @@ class Building(object):
         self.x = x
         self.y = y
 
-# !!!!!!!! x and y need to go to superclass, also add angle and grid !!!!!!!!!!!!!!!
+
 class EengezinsWoning(Building):
-    def __init__(self, x, y):
+    def __init__(self, x, y, angle, gridWidth, gridDepth):
+        Building.__init__(self, x, y, angle, gridWidth, gridDepth)
         self.name = 'eengezinswoning'
-        self.x = x
-        self.y = y
-        self.grid = Grid(100,100,2)
         self.width = 8
         self.depth = 8
-        self.angle = 0
-##        self.grid = Grid(100,100,2)
         self.value = 285000
-        self.percentage = 3
+        self.percentage = .03
         self.vrijstand = 2
 
-    def calculatePrice(self, building, distance):
-        """ Calculates the price of a single house.
-        @distance is total 'vrijstand' of that house. """
-        extravrijstand = distance - building.vrijstand
-        prijsverb = (building.percentage * extravrijstand) / 100 + 1
-        huisprijs = building.value * prijsverb
-
-        return float(huisprijs)
-
 class Bungalow(Building):
-    def __init__(self, x, y):
+    def __init__(self, x, y, angle, gridWidth, gridDepth):
+        Building.__init__(self, x, y, angle, gridWidth, gridDepth)
         self.name = 'bungalow'
-        self.x = x
-        self.y = y
-        self.angle = 0
-        self.grid = Grid(100,100,2)
         self.width = 10
         self.depth = 7.5
-        self.angle = 0
-##        self.grid = Grid(100,100,2)
         self.value = 399000
-        self.percentage = 4
+        self.percentage = .04
         self.vrijstand = 3
         
-    def calculatePrice(self, building, distance):
-        """ Calculates the price of a single house.
-        @distance is total 'vrijstand' of that house. """
-        extravrijstand = distance - building.vrijstand
-        prijsverb = (building.percentage * extravrijstand) / 100 + 1
-        huisprijs = building.value * prijsverb
-
-        return float(huisprijs)
-        
 class Maison(Building):
-    def __init__(self, x, y):
+    def __init__(self, x, y, angle, gridWidth, gridDepth):
+        Building.__init__(self, x, y, angle, gridWidth, gridDepth)
         self.name = 'maison'
-        self.x = x
-        self.y = y
-        self.angle = 0
-
-        self.grid = Grid(100,100,2)
         self.width = 11
         self.depth = 10.5
-
-##        self.grid = Grid(100,100,2)
-        #self.width = 11 / precision
-        #self.depth = 10 / precision
-
         self.value = 610000
-        self.percentage = 6
+        self.percentage = .06
         self.vrijstand = 6
-        
-    def calculatePrice(self, building, distance):
-        """ Calculates the price of a single house.
-        @distance is total 'vrijstand' of that house. """
-        extravrijstand = distance - building.vrijstand
-        prijsverb = (building.percentage * extravrijstand) / 100 + 1
-        huisprijs = building.value * prijsverb
-
-        return float(huisprijs)
 
 
 #====================MAIN THREAD ===================================#
 if __name__ == '__main__':
-    file = open('results.csv', 'wb+')
-    writer = csv.writer(file)
-    writer.writerow(['Distance', 'Prijs'])
-    
+##    E = EengezinsWoning(10, 10, 0, 100, 100)
+##    B = Bungalow(50, 0, 0, 100, 100)
+##    M = Maison(94.0001, 50, 180, 100, 100)
+##
+##    grid = Grid(100, 100, 5)
+##    grid.addBuilding(E)
+##    grid.addBuilding(B)
+##    grid.addBuilding(M)
+##
+##    print 'Eengezinswoning', grid.calcPrice(E)
+##    print 'Bungalow', grid.calcPrice(B)
+##    print 'Maison', grid.calcPrice(M)
+##    print 'Total', grid.calcTotalPrice()
+##    print grid.findOverlap2(M)
+##
     precision = 1.0
-    grid = Grid(120., 160., 60)
-    simulations = 100000
-    grid.updateGrid(simulations)
+##    grid = Grid(120, 160, 60)
+
+    a = translatingRandomSample(20, 120, 160, 0.5)
+    ##grid.randomPlacements2()
+
+##    file = open('results.csv', 'wb+')
+##    writer = csv.writer(file)
+##    writer.writerow(['Distance', 'Prijs'])
+    
+##    precision = 1.0
+##    grid = Grid(120., 160., 60)
+##    simulations = 100000
+##    grid.updateGrid(simulations)
 
     # ====== TEST RUNS ======= #
     #b1 = EengezinsWoning(15,15)
