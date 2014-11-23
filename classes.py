@@ -394,19 +394,19 @@ class Grid(object):
             randomTries = 0
             while i < self.aantalhuizen and randomTries < 1000:
                 if i < .15 * self.aantalhuizen:
-                    ran_x = random.random() * (self.width - 11)
-                    ran_y = random.random() * (self.depth - 10.5)
-                    ran_angle = 0##random.randrange(0,360)
+                    ran_x = random.random() * (self.width )
+                    ran_y = random.random() * (self.depth )
+                    ran_angle = 0#random.randrange(0,360)
                     building = Maison(ran_x, ran_y, ran_angle, self.width, self.depth)
                 elif i < .4 * self.aantalhuizen:
-                    ran_x = random.random() * (self.width - 10)
-                    ran_y = random.random() * (self.depth - 7.5)
-                    ran_angle = 0##random.randrange(0,360)
+                    ran_x = random.random() * (self.width )
+                    ran_y = random.random() * (self.depth )
+                    ran_angle = 0#random.randrange(0,360)
                     building = Bungalow(ran_x, ran_y, ran_angle, self.width, self.depth)
                 else:
-                    ran_x = random.random() * (self.width - 8)
-                    ran_y = random.random() * (self.depth - 8)
-                    ran_angle = 0##random.randrange(0,360)
+                    ran_x = random.random() * (self.width )
+                    ran_y = random.random() * (self.depth )
+                    ran_angle = 0#random.randrange(0,360)
                     building = EengezinsWoning(ran_x, ran_y, ran_angle, self.width, self.depth)
 
                 overlap = self.findOverlap2(building)
@@ -419,10 +419,10 @@ class Grid(object):
                     randomTries += 1
 
             noConfiguration = overlap
-        ##anim = GridVisualisation(self.width,self.depth, self.buildings, 0)
-        ##anim.emptyAnimation(self.buildings)
-        ##anim.updateAnimation(self.buildings, 0)
-        ##print trials
+        anim = GridVisualisation(self.width,self.depth, self.buildings, 0)
+        anim.emptyAnimation(self.buildings)
+        anim.updateAnimation(self.buildings, 0)
+        print trials
             
 
     # Initializes the grid with non overlapping buildings, at random positions.
@@ -466,6 +466,531 @@ class Grid(object):
 
         # Returns the best building setup + it's prijsverb + it's distance
         return best_buildings, int(best_prijsverb), distance
+
+    def newRandomPos(self, building, previousPrice):
+        currentX = building.x
+        currentY = building.y
+        
+        newX = random.random() * grid.width
+        newY = random.random() * grid.depth
+        building.newPosition(newX, newY)
+
+        # If position valid calculate the new price
+        if not self.findOverlap2(building):
+            newPrice = self.calcTotalPrice()[0]
+        else:
+            newPrice = 0
+
+        # When the new configuration has a higher total price keep it, else
+        # change back to previous configuration
+        if newPrice <= previousPrice:                
+            building.newPosition(currentX, currentY)
+
+        return newPrice
+
+    def newRandomPosSA(self, building, previousPrice, t):
+        currentX = building.x
+        currentY = building.y
+
+        lifetime = 1000000        
+
+        newX = random.random() * grid.width
+        newY = random.random() * grid.depth
+        building.newPosition(newX, newY)
+
+        # If position valid calculate the new price
+        if not self.findOverlap2(building):
+            newPrice = self.calcTotalPrice()[0]
+        else:
+            newPrice = 0
+
+        # When the new configuration has a higher total price keep it, else
+        # change back to previous configuration. There is a chance of accepting
+        # worse state depending on iteration and price difference
+        if newPrice <= previousPrice:
+            accept = math.exp((newPrice - previousPrice) * t / lifetime)
+            if random.random() > accept or newPrice == 0:
+                building.newPosition(currentX, currentY)
+
+        return newPrice
+
+    def swapBuildings(self, building1, building2, previousPrice):
+        currentX1 = building1.x
+        currentY1 = building1.y
+        currentX2 = building2.x
+        currentY2 = building2.y
+
+        self.swapBuilding(building1, building2)
+
+        if not self.findOverlap2(building1) and not self.findOverlap2(building2):
+            newPrice = self.calcTotalPrice()[0]
+        else:
+            newPrice = 0
+
+        if newPrice <= previousPrice:
+            self.swapBuilding(building1, building2)
+
+        return newPrice
+
+    def SAswapBuildings(self, building1, building2, previousPrice, t):
+        currentX1 = building1.x
+        currentY1 = building1.y
+        currentX2 = building2.x
+        currentY2 = building2.y
+
+        lifetime = 100000
+
+        self.swapBuilding(building1, building2)
+
+        if not self.findOverlap2(building1) and not self.findOverlap2(building2):
+            newPrice = self.calcTotalPrice()[0]
+        else:
+            newPrice = 0
+
+        if newPrice <= previousPrice:
+            accept = math.exp((newPrice - previousPrice) * t / lifetime)
+            if random.random() > accept or newPrice == 0:
+                self.swapBuilding(building1, building2)
+
+        return newPrice
+        
+    def newRandomRot(self, ID, previousPrice):
+        currentAngle = self.buildings[ID].angle
+
+        newAngle = random.random() * 360
+        self.buildings[ID].newAngle(newAngle)
+
+        if not self.findOverlap2(self.buildings[ID]):
+            newPrice = self.calcTotalPrice()[0]
+        else:
+            newPrice = 0
+
+        if newPrice <= previousPrice:
+            self.buildings[ID].newAngle(currentAngle)
+
+        return newPrice
+
+def rotatingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
+    """
+    Uses hill climber algorithm to find optimum rotation. Does not work properly
+    """
+    # Define grid and place sample
+    grid = Grid(gridWidth, gridDepth, aantalhuizen)
+    grid.randomPlacements2()
+    
+    newPrice = grid.calcTotalPrice()[0]
+    previousPrice = newPrice
+    priceDevelopment = [newPrice]
+
+    anim = GridVisualisation(gridWidth, gridDepth, grid.buildings, 0)
+    anim.emptyAnimation(grid.buildings)
+
+    i = 0
+    noChange = 0
+
+    # When over 5000 iterations the change is less than 10 per iteration the
+    # loop is terminated
+    while noChange < 1000:
+
+        # Makes animation for every 1000th iteration
+        if i%100==0:
+            print i, previousPrice
+            anim.emptyAnimation(grid.buildings)
+            anim.updateAnimation(grid.buildings, 0)        
+
+        # Choose random building
+        buildingID = random.randrange(0, aantalhuizen)
+
+        newPrice = grid.newRandomRot(buildingID, previousPrice)
+        priceDif = newPrice - previousPrice
+
+        if priceDif > 0:
+            previousPrice = newPrice
+        
+        if priceDif < 10:
+            noChange += 1
+        else:
+            noChange = 0
+
+            
+        priceDevelopment.append(previousPrice)
+        i += 1
+
+    iterations = [x for x in xrange(len(priceDevelopment))]
+    plt.plot(iterations, priceDevelopment)
+    plt.show()
+
+    anim.emptyAnimation(grid.buildings)
+    anim.updateAnimation(grid.buildings, 0)
+
+    print 'angles'
+    for building in grid.buildings:
+        print building.angle
+    
+    return priceDevelopment
+
+def translatingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
+    """
+    Uses hillclimber algorithm to find local optimal solution. Uses translation.
+    """
+    # Define grid and place sample
+    grid = Grid(gridWidth, gridDepth, aantalhuizen)
+    grid.randomPlacements2()
+    
+    newPrice = grid.calcTotalPrice()[0]
+    previousPrice = newPrice
+    priceDevelopment = [newPrice]
+
+    anim = GridVisualisation(gridWidth, gridDepth, grid.buildings, 0)
+    anim.emptyAnimation(grid.buildings)
+
+    i = 0
+    noChange = 0
+
+    # When over 5000 iterations the change is less than 10 per iteration the
+    # loop is terminated
+    while noChange < 5000:
+
+        # Makes animation for every 1000th iteration
+        if i%1000==0:
+            print i, previousPrice
+            anim.emptyAnimation(grid.buildings)
+            anim.updateAnimation(grid.buildings, 0)        
+
+        # Choose random building
+        building = grid.buildings[random.randrange(0, aantalhuizen)]
+
+        newPrice = grid.newRandomPos(building, previousPrice)
+
+        priceDif = newPrice - previousPrice
+
+        if priceDif > 0:
+            previousPrice = newPrice
+        
+        if priceDif < 10:
+            noChange += 1
+        else:
+            noChange = 0
+
+        priceDevelopment.append(previousPrice)
+        i += 1
+
+    iterations = [x for x in xrange(len(priceDevelopment))]
+    plt.plot(iterations, priceDevelopment)
+    plt.show()
+
+    anim.emptyAnimation(grid.buildings)
+    anim.updateAnimation(grid.buildings, 0)
+
+    return priceDevelopment
+
+def SAtranslatingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
+    """
+    Uses simulated annealing algorithm to find local optimal solution. Uses translation.
+    """
+    # Define grid and place sample
+    grid = Grid(gridWidth, gridDepth, aantalhuizen)
+    grid.randomPlacements2()
+    
+    newPrice = grid.calcTotalPrice()[0]
+    previousPrice = newPrice
+    priceDevelopment = [newPrice]
+
+    anim = GridVisualisation(gridWidth, gridDepth, grid.buildings, 0)
+    anim.emptyAnimation(grid.buildings)
+
+    i = 0
+    noChange = 0
+
+    # When over 5000 iterations the change is less than 10 per iteration the
+    # loop is terminated
+    while noChange < 5000:
+
+        # Makes animation for every 1000th iteration
+        if i%1000==0:
+            print i, previousPrice
+            anim.emptyAnimation(grid.buildings)
+            anim.updateAnimation(grid.buildings, 0)        
+
+        # Choose random building
+        building = grid.buildings[random.randrange(0, aantalhuizen)]
+
+        newPrice = grid.newRandomPosSA(building, previousPrice, i)
+
+        priceDif = newPrice - previousPrice
+
+        if priceDif > 0:
+            previousPrice = newPrice
+        
+        if priceDif < 10:
+            noChange += 1
+        else:
+            noChange = 0
+
+        priceDevelopment.append(previousPrice)
+        i += 1
+
+    iterations = [x for x in xrange(len(priceDevelopment))]
+    plt.plot(iterations, priceDevelopment)
+    plt.show()
+
+    anim.emptyAnimation(grid.buildings)
+    anim.updateAnimation(grid.buildings, 0)
+
+    return priceDevelopment
+
+def swappingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
+    """
+    Uses hillclimber algorithm to find local optimal solution. Uses swapping.
+    """
+    # Define grid and place sample
+    grid = Grid(gridWidth, gridDepth, aantalhuizen)
+    grid.randomPlacements2()
+    
+    newPrice = grid.calcTotalPrice()[0]
+    previousPrice = newPrice
+    priceDevelopment = [newPrice]
+
+    anim = GridVisualisation(gridWidth, gridDepth, grid.buildings, 0)
+    anim.emptyAnimation(grid.buildings)
+
+    i = 0
+    noChange = 0
+
+    # When over 5000 iterations the change is less than 10 per iteration the
+    # loop is terminated
+    while noChange < 2000:
+
+        # Makes animation for every 1000th iteration
+        if i%1000==0:
+            print i, previousPrice
+            anim.emptyAnimation(grid.buildings)
+            anim.updateAnimation(grid.buildings, 0)        
+
+        # Choose random building
+        building1 = grid.buildings[random.randrange(0, aantalhuizen)]
+        building2 = grid.buildings[random.randrange(0, aantalhuizen)]
+
+        
+        while building1 == building2:
+            building2 = grid.buildings[random.randrange(0, aantalhuizen)]
+    
+        newPrice = grid.swapBuildings(building1, building2, previousPrice)
+
+        priceDif = newPrice - previousPrice
+
+        if priceDif > 0:
+            previousPrice = newPrice
+        
+        if priceDif < 10:
+            noChange += 1
+        else:
+            noChange = 0
+
+        priceDevelopment.append(previousPrice)
+        i += 1
+
+    iterations = [x for x in xrange(len(priceDevelopment))]
+    plt.plot(iterations, priceDevelopment)
+    plt.show()
+
+    anim.emptyAnimation(grid.buildings)
+    anim.updateAnimation(grid.buildings, 0)
+
+    return priceDevelopment
+
+def SAswappingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
+    """
+    Uses hillclimber algorithm to find local optimal solution. Uses swapping.
+    """
+    # Define grid and place sample
+    grid = Grid(gridWidth, gridDepth, aantalhuizen)
+    grid.randomPlacements2()
+    
+    newPrice = grid.calcTotalPrice()[0]
+    previousPrice = newPrice
+    priceDevelopment = [newPrice]
+
+    anim = GridVisualisation(gridWidth, gridDepth, grid.buildings, 0)
+    anim.emptyAnimation(grid.buildings)
+
+    i = 0
+    noChange = 0
+
+    # When over 5000 iterations the change is less than 10 per iteration the
+    # loop is terminated
+    while noChange < 2000:
+
+        # Makes animation for every 1000th iteration
+        if i%1000==0:
+            print i, previousPrice
+            anim.emptyAnimation(grid.buildings)
+            anim.updateAnimation(grid.buildings, 0)        
+
+        # Choose random building
+        building1 = grid.buildings[random.randrange(0, aantalhuizen)]
+        building2 = grid.buildings[random.randrange(0, aantalhuizen)]
+
+        while building1 == building2:
+            building2 = grid.buildings[random.randrange(0, aantalhuizen)]
+    
+        newPrice = grid.SAswapBuildings(building1, building2, previousPrice, i)
+
+        priceDif = newPrice - previousPrice
+
+        if priceDif > 0:
+            previousPrice = newPrice
+        
+        if priceDif < 10:
+            noChange += 1
+        else:
+            noChange = 0
+
+        priceDevelopment.append(previousPrice)
+        i += 1
+
+    iterations = [x for x in xrange(len(priceDevelopment))]
+    plt.plot(iterations, priceDevelopment)
+    plt.show()
+
+    anim.emptyAnimation(grid.buildings)
+    anim.updateAnimation(grid.buildings, 0)
+
+    return priceDevelopment
+
+def combinationRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
+    """
+    Uses hillclimber algorithm to find local optimal solution. Uses swapping.
+    """
+    # Define grid and place sample
+    grid = Grid(gridWidth, gridDepth, aantalhuizen)
+    grid.randomPlacements2()
+    
+    newPrice = grid.calcTotalPrice()[0]
+    previousPrice = newPrice
+    priceDevelopment = [newPrice]
+
+    anim = GridVisualisation(gridWidth, gridDepth, grid.buildings, 0)
+    anim.emptyAnimation(grid.buildings)
+
+    i = 0
+    noChange = 0
+
+    # When over 5000 iterations the change is less than 10 per iteration the
+    # loop is terminated
+    while noChange < 5000:
+
+        # Makes animation for every 1000th iteration
+        if i%1000==0:
+            print i, previousPrice
+            anim.emptyAnimation(grid.buildings)
+            anim.updateAnimation(grid.buildings, 0)        
+
+        # There is chance 0.2 to swap random buildings and 0.8 to translate
+        # building
+        if random.random() > 0.8:    
+            # Choose random building
+            building1 = grid.buildings[random.randrange(0, aantalhuizen)]
+            building2 = grid.buildings[random.randrange(0, aantalhuizen)]
+    
+            while building1 == building2:
+                building2 = grid.buildings[random.randrange(0, aantalhuizen)]
+    
+            newPrice = grid.swapBuildings(building1, building2, previousPrice)
+        else: 
+            # Choose random building
+            building = grid.buildings[random.randrange(0, aantalhuizen)]
+
+            newPrice = grid.newRandomPos(building, previousPrice)
+
+        priceDif = newPrice - previousPrice
+
+        if priceDif > 0:
+            previousPrice = newPrice
+        
+        if priceDif < 10:
+            noChange += 1
+        else:
+            noChange = 0
+
+        priceDevelopment.append(previousPrice)
+        i += 1
+
+    iterations = [x for x in xrange(len(priceDevelopment))]
+    plt.plot(iterations, priceDevelopment)
+    plt.show()
+
+    anim.emptyAnimation(grid.buildings)
+    anim.updateAnimation(grid.buildings, 0)
+
+    return priceDevelopment
+
+def combinationRandomSample2SA(aantalhuizen, gridWidth, gridDepth, step):
+    """
+    Uses hillclimber algorithm to find local optimal solution. Uses swapping.
+    """
+    # Define grid and place sample
+    grid = Grid(gridWidth, gridDepth, aantalhuizen)
+    grid.randomPlacements2()
+    
+    newPrice = grid.calcTotalPrice()[0]
+    previousPrice = newPrice
+    priceDevelopment = [newPrice]
+
+    anim = GridVisualisation(gridWidth, gridDepth, grid.buildings, 0)
+    anim.emptyAnimation(grid.buildings)
+
+    i = 0
+    noChange = 0
+
+    # When over 5000 iterations the change is less than 10 per iteration the
+    # loop is terminated
+    while noChange < 5000:
+
+        # Makes animation for every 1000th iteration
+        if i%1000==0:
+            print i, previousPrice
+            anim.emptyAnimation(grid.buildings)
+            anim.updateAnimation(grid.buildings, 0)        
+
+        # There is chance 0.2 to swap random buildings and 0.8 to translate
+        # building
+        if random.random() > 0.8:    
+            # Choose random building
+            building1 = grid.buildings[random.randrange(0, aantalhuizen)]
+            building2 = grid.buildings[random.randrange(0, aantalhuizen)]
+    
+            while building1 == building2:
+                building2 = grid.buildings[random.randrange(0, aantalhuizen)]
+    
+            newPrice = grid.SAswapBuildings(building1, building2, previousPrice, i)
+        else: 
+            # Choose random building
+            building = grid.buildings[random.randrange(0, aantalhuizen)]
+
+            newPrice = grid.newRandomPosSA(building, previousPrice, i)
+
+        priceDif = newPrice - previousPrice
+
+        if priceDif > 0:
+            previousPrice = newPrice
+        
+        if priceDif < 10:
+            noChange += 1
+        else:
+            noChange = 0
+
+        priceDevelopment.append(previousPrice)
+        i += 1
+
+    iterations = [x for x in xrange(len(priceDevelopment))]
+    plt.plot(iterations, priceDevelopment)
+    plt.show()
+
+    anim.emptyAnimation(grid.buildings)
+    anim.updateAnimation(grid.buildings, 0)
+
+    return priceDevelopment
 
 def translatingRandomSample(aantalhuizen, gridWidth, gridDepth, step):
     grid = Grid(gridWidth, gridDepth, aantalhuizen)
@@ -533,7 +1058,6 @@ def translatingRandomSample(aantalhuizen, gridWidth, gridDepth, step):
         priceDevelopment.append(totalPrice)
         i += 1
 
-
     iterations = [x for x in xrange(len(priceDevelopment))]
     plt.plot(iterations, priceDevelopment)
     plt.show()
@@ -573,6 +1097,9 @@ class Building(object):
         # Place building at another place
         self.x = x
         self.y = y
+    def newAngle(self, angle):
+        # Give a new angle to building
+        self.angle = angle * 2 * math.pi / 360
 
 
 class EengezinsWoning(Building):
@@ -624,10 +1151,16 @@ if __name__ == '__main__':
 ##    print grid.findOverlap2(M)
 ##
     precision = 1.0
-##    grid = Grid(120, 160, 60)
+    grid = Grid(120, 160, 2)
 
-    a = translatingRandomSample(20, 120, 160, 0.5)
-    ##grid.randomPlacements2()
+    
+    #a = translatingRandomSample2(20, 120, 160, 0.5)
+    #b = SAtranslatingRandomSample2(60, 120, 160, 0.5)
+    #b = rotatingRandomSample2(20, 120, 160, 0.5)
+    #c = SAswappingRandomSample2(20, 120, 160, 0.5)
+    #d = combinationRandomSample2(60, 120, 160, 0.5)
+    e = combinationRandomSample2SA(20, 120, 160, 0.5)
+    #grid.randomPlacements2()
 
 ##    file = open('results.csv', 'wb+')
 ##    writer = csv.writer(file)
