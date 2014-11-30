@@ -1,5 +1,5 @@
 from Tkinter import *
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import random
 import math
 import time
@@ -93,6 +93,7 @@ class GridVisualisation:
         "Indicate that the animation is done so that we allow the user to close the window."
         mainloop()
 
+
 class Grid(object):
     def __init__(self, width, depth, aantalhuizen):
         self.width = width
@@ -184,7 +185,7 @@ class Grid(object):
             if r != 0:
                 theta =  sign * math.acos((corner[0] - house1.x) / r)
             
-                rotCorners.append((house1.x + r * math.cos(theta - house1.angle),\
+                rotCorners.append((house1.x + r * math.cos(theta - house1.angle),
                                    house1.y + r * math.sin(theta - house1.angle)))
             else:
                 rotCorners.append((corner[0], corner[1]))
@@ -232,7 +233,7 @@ class Grid(object):
                 if r != 0:
                     theta = sign * math.acos((corner[0] - d[i][0].x) / r)
 
-                    rotCorners2.append((d[i][0].x + r * math.cos(theta - d[i][0].angle),\
+                    rotCorners2.append((d[i][0].x + r * math.cos(theta - d[i][0].angle),
                                        d[i][0].y + r * math.sin(theta - d[i][0].angle)))
                 else:
                     rotCorners2.append((corner[0], corner[1]))
@@ -291,17 +292,21 @@ class Grid(object):
         # Choose a distance that overestimates any possible distance
         shortestDist = math.sqrt(self.width**2 + self.depth**2)
 
+        # Finds a radius in which the closest building lies
         maxDist = float('inf')
         diagonal = math.sqrt(building.width**2 + building.depth**2) + math.sqrt(11**2 + 10.5**2)
         for neighbor in self.buildings:
             dist = math.sqrt((building.x - neighbor.x)**2 + (building.y - neighbor.y)**2)
-            if dist < maxDist:
+            if dist < maxDist and building != neighbor:
                 maxDist = dist
+        # Add diagonal to distance between corners to account for rotation and orientation of
+        # buildings
         maxDist += diagonal
 
+        # Calculate the distance to all buildings in the maxDist radius
         for neighbor in self.buildings:
             dist = math.sqrt((building.x - neighbor.x)**2 + (building.y - neighbor.y)**2)
-            
+
             if building != neighbor and dist < maxDist:
                 newDist = self.findDistance(building, neighbor)
                 if newDist < shortestDist:
@@ -442,7 +447,6 @@ class Grid(object):
             anim.emptyAnimation(self.buildings)
             self.randomPlacements()
 
-
             # Calculates the total prijsverb for all buildings.
             totalPrice = self.calcTotalPrice()
             totalprijsverb = totalPrice[0]
@@ -454,11 +458,11 @@ class Grid(object):
                 best_buildings = self.buildings
 
             if simulation % 10 == 0:
-                print 'We ran: ' ,simulation, 'simulations'
+                print 'We ran: ', simulation, 'simulations'
                 
             anim.updateAnimation(self.buildings, totalprijsverb)
                 
-        anim = GridVisualisation(self.width,self.depth, best_buildings, best_prijsverb)
+        anim = GridVisualisation(self.width, self.depth, best_buildings, best_prijsverb)
         writer.writerow([distance, best_prijsverb])
         # Shows the best prijsverb.    
 ##        anim.emptyAnimation(self.buildings)
@@ -487,6 +491,17 @@ class Grid(object):
             building.newPosition(currentX, currentY)
 
         return newPrice
+
+    def randomTrans(self, building, previousPrice):
+        ranDist = random.random()
+        ranAngle = random.random()*360
+
+        dx = ranDist = 
+        cos(x) = dx/r
+        dx = rcos(x)
+
+        building.translate(dx, dy)
+
 
     def newRandomPosSA(self, building, previousPrice, t):
         currentX = building.x
@@ -612,7 +627,6 @@ def rotatingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
         else:
             noChange = 0
 
-            
         priceDevelopment.append(previousPrice)
         i += 1
 
@@ -684,6 +698,7 @@ def translatingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
 
     return priceDevelopment
 
+
 def SAtranslatingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
     """
     Uses simulated annealing algorithm to find local optimal solution. Uses translation.
@@ -738,6 +753,7 @@ def SAtranslatingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
     anim.updateAnimation(grid.buildings, 0)
 
     return priceDevelopment
+
 
 def swappingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
     """
@@ -799,6 +815,7 @@ def swappingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
 
     return priceDevelopment
 
+
 def SAswappingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
     """
     Uses hillclimber algorithm to find local optimal solution. Uses swapping.
@@ -857,6 +874,7 @@ def SAswappingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
     anim.updateAnimation(grid.buildings, 0)
 
     return priceDevelopment
+
 
 def combinationRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
     """
@@ -925,6 +943,7 @@ def combinationRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
 
     return priceDevelopment
 
+
 def combinationRandomSample2SA(aantalhuizen, gridWidth, gridDepth, step):
     """
     Uses hillclimber algorithm to find local optimal solution. Uses swapping.
@@ -984,13 +1003,14 @@ def combinationRandomSample2SA(aantalhuizen, gridWidth, gridDepth, step):
         i += 1
 
     iterations = [x for x in xrange(len(priceDevelopment))]
-    plt.plot(iterations, priceDevelopment)
-    plt.show()
+    #plt.plot(iterations, priceDevelopment)
+    #plt.show()
 
     anim.emptyAnimation(grid.buildings)
     anim.updateAnimation(grid.buildings, 0)
 
     return priceDevelopment
+
 
 def translatingRandomSample(aantalhuizen, gridWidth, gridDepth, step):
     grid = Grid(gridWidth, gridDepth, aantalhuizen)
@@ -1064,6 +1084,61 @@ def translatingRandomSample(aantalhuizen, gridWidth, gridDepth, step):
 
     anim.emptyAnimation(grid.buildings)
     anim.updateAnimation(grid.buildings, 0)
+    return priceDevelopment
+
+def translatingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
+    """
+    Uses hillclimber algorithm to find local optimal solution. Uses translation.
+    """
+    # Define grid and place sample
+    grid = Grid(gridWidth, gridDepth, aantalhuizen)
+    grid.randomPlacements2()
+
+    newPrice = grid.calcTotalPrice()[0]
+    previousPrice = newPrice
+    priceDevelopment = [newPrice]
+
+    anim = GridVisualisation(gridWidth, gridDepth, grid.buildings, 0)
+    anim.emptyAnimation(grid.buildings)
+
+    i = 0
+    noChange = 0
+
+    # When over 5000 iterations the change is less than 10 per iteration the
+    # loop is terminated
+    while noChange < 5000:
+
+        # Makes animation for every 1000th iteration
+        if i%1000==0:
+            print i, previousPrice
+            anim.emptyAnimation(grid.buildings)
+            anim.updateAnimation(grid.buildings, 0)
+
+        # Choose random building
+        building = grid.buildings[random.randrange(0, aantalhuizen)]
+
+        newPrice = grid.newRandomPos(building, previousPrice)
+
+        priceDif = newPrice - previousPrice
+
+        if priceDif > 0:
+            previousPrice = newPrice
+
+        if priceDif < 10:
+            noChange += 1
+        else:
+            noChange = 0
+
+        priceDevelopment.append(previousPrice)
+        i += 1
+
+    iterations = [x for x in xrange(len(priceDevelopment))]
+    plt.plot(iterations, priceDevelopment)
+    plt.show()
+
+    anim.emptyAnimation(grid.buildings)
+    anim.updateAnimation(grid.buildings, 0)
+
     return priceDevelopment
 
 class Building(object):
@@ -1153,7 +1228,7 @@ if __name__ == '__main__':
     precision = 1.0
     grid = Grid(120, 160, 2)
 
-    
+
     #a = translatingRandomSample2(20, 120, 160, 0.5)
     #b = SAtranslatingRandomSample2(60, 120, 160, 0.5)
     #b = rotatingRandomSample2(20, 120, 160, 0.5)
@@ -1165,7 +1240,7 @@ if __name__ == '__main__':
 ##    file = open('results.csv', 'wb+')
 ##    writer = csv.writer(file)
 ##    writer.writerow(['Distance', 'Prijs'])
-    
+
 ##    precision = 1.0
 ##    grid = Grid(120., 160., 60)
 ##    simulations = 100000
@@ -1189,7 +1264,7 @@ if __name__ == '__main__':
     #grid.addBuilding(b2)
     #print grid.findDistance(b1, b2)
     #print grid.findDistance(b2, b1)
-    
+
     #print "Rotatie", grid.findOverlap(b1,b2)
     #print grid.cornerInBuilding(b1,b2)
     #print grid.cornerInBuilding(b2,b1)
@@ -1222,7 +1297,7 @@ if __name__ == '__main__':
 ##    grid.updateGrid()
     # Precision ratio to one meter. (0.5 is half meters, 0.1 is 10cm etc)
 
-    # Says False but should be True 
+    # Says False but should be True
 ##    b1 = Maison(43.,10.,1.)
 ##    b2 = Maison(45.,10.,1.)
 ##    grid = Grid(60.,60.,2.,1.)
