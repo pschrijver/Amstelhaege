@@ -492,15 +492,13 @@ class Grid(object):
 
         return newPrice
 
-    def randomTrans(self, building, previousPrice):
-        ranDist = random.random()
-        ranAngle = random.random()*360
+    ##def randomTrans(self, building, previousPrice):
+        ##ranDist = random.random()
+        ##ranAngle = random.random() * 2 * math.pi
 
-        dx = ranDist = 
-        cos(x) = dx/r
-        dx = rcos(x)
-
-        building.translate(dx, dy)
+        ##dx = ranDist * math.cos(ranAngle)
+        ##dy = ranDist * math.sin(ranAngle)
+        ##building.translate(dx, dy)
 
 
     def newRandomPosSA(self, building, previousPrice, t):
