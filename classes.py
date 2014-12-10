@@ -5,6 +5,8 @@ import random
 import math
 import time
 import csv
+import multiprocessing
+from multiprocessing import Manager
 
 # Uses code from the Robot assignment MIT
 
@@ -1158,7 +1160,7 @@ def geneticAlgorithm(popsize, generations, aantalhuizen, gridWidth, gridDepth):
 
         # Creating starting situation.
         if gencount == 0:
-            population = GAstart(popsize, aantalhuizen, gridWidth, gridDepth)
+            population = createStartPopulation(popsize, aantalhuizen, gridWidth, gridDepth)
             print "Starting evolution..."
 
         # Sort by value (high to low).
@@ -1185,40 +1187,69 @@ def geneticAlgorithm(popsize, generations, aantalhuizen, gridWidth, gridDepth):
     return population
 
 
-def GAstart(popsize, aantalhuizen, gridWidth, gridDepth):
+def createStartPopulation(popsize, aantalhuizen, gridWidth, gridDepth):
     # Create initial population.
+    print 'Generating start state...'
     poplist = []
 
-    print 'Generating start state...'
-    for i in range(0, popsize):
-        templist = []
-        grid = Grid(gridWidth, gridDepth, aantalhuizen)
-        grid.randomPlacements2()
-        templist.append(grid)
-        totalprice = grid.calcTotalPrice()[0]
-        templist.append(totalprice)
-        poplist.append(templist)
+    while len(poplist) < popsize:
+        manager = Manager()
+        return_dict = manager.dict()
+        jobs = []
+
+        for i in range(processes):
+            p = multiprocessing.Process(target=createRandomCandidate, args=(aantalhuizen, gridWidth, gridDepth,return_dict))
+            jobs.append(p)
+            p.start()
+
+        for proc in jobs:
+            proc.join()
+
+        for i in list(return_dict.values()):
+            templist = []
+            templist.append(i)
+            totalprice = i.calcTotalPrice()[0]
+            templist.append(totalprice)
+            poplist.append(templist)
+
+        print len(poplist), "random candidates generated."
 
     return poplist
+
+def createRandomCandidate(aantalhuizen, gridWidth, gridDepth, return_dict):
+    grid = Grid(gridWidth, gridDepth, aantalhuizen)
+    grid.randomPlacements2()
+    return_dict[grid] = grid
+
 
 def createGeneration(popsize, population, aantalhuizen, gridWidth, gridDepth):
     new_pop = []
     # Builds a single candidate every iteration.
     while len(new_pop) < popsize:
-        grid = createCandidate(population, aantalhuizen, gridWidth, gridDepth)
+        manager = Manager()
+        return_dict = manager.dict()
+        jobs = []
 
-        # Candidate has evolved. Add to the new population.
-        templist = []
-        templist.append(grid)
-        totalprice = grid.calcTotalPrice()[0]
-        templist.append(totalprice)
-        new_pop.append(templist)
+        for i in range(processes):
+            p = multiprocessing.Process(target=createCandidate, args=(population, aantalhuizen, gridWidth, gridDepth,return_dict))
+            jobs.append(p)
+            p.start()
+
+        for proc in jobs:
+            proc.join()
+
+        for i in list(return_dict.values()):
+            templist = []
+            templist.append(i)
+            totalprice = i.calcTotalPrice()[0]
+            templist.append(totalprice)
+            new_pop.append(templist)
+        print len(new_pop), "candidates evolved."
 
     return new_pop
 
 
-def createCandidate(population, aantalhuizen, gridWidth, gridDepth):
-    #print 'evolving'
+def createCandidate(population, aantalhuizen, gridWidth, gridDepth, return_dict):
     candidates = []
 
     # Pick three random candidates from population.
@@ -1307,7 +1338,7 @@ def createCandidate(population, aantalhuizen, gridWidth, gridDepth):
         # Change position if it doesn't meet the constraints.
         checkHouse(grid, randombuilding)
 
-    return grid
+    return_dict[grid] = grid
 
 
 def checkHouse(grid, building):
@@ -1387,6 +1418,12 @@ class Maison(Building):
 
 #====================MAIN THREAD ===================================#
 if __name__ == '__main__':
+
+    processes = 100 # Amount of simultaneous processes. Shouldn't exceed popluatie.
+    precision = 1.0
+    generaties = 100
+    populatie = 500
+    geneticAlgorithm(populatie, generaties, 60, 120, 160)
 ##    E = EengezinsWoning(10, 10, 0, 100, 100)
 ##    B = Bungalow(50, 0, 0, 100, 100)
 ##    M = Maison(94.0001, 50, 180, 100, 100)
@@ -1423,10 +1460,6 @@ if __name__ == '__main__':
 ##    simulations = 100000
 ##    grid.updateGrid(simulations)
 
-    precision = 1.0
-    generaties = 10
-    populatie = 100
-    geneticAlgorithm(populatie, generaties, 20, 120, 160)
 
     # ====== TEST RUNS ======= #
     #b1 = EengezinsWoning(15,15)
