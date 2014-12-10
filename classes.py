@@ -393,8 +393,8 @@ class Grid(object):
 
             trials += 1
 
-            if trials % 1 == 0:
-                print trials
+            #if trials % 1 == 0:
+                #print trials
 
             overlap = False
             i = 0
@@ -426,10 +426,10 @@ class Grid(object):
                     randomTries += 1
 
             noConfiguration = overlap
-        anim = GridVisualisation(self.width,self.depth, self.buildings, 0)
-        anim.emptyAnimation(self.buildings)
-        anim.updateAnimation(self.buildings, 0)
-        print trials
+        #anim = GridVisualisation(self.width,self.depth, self.buildings, 0)
+        #anim.emptyAnimation(self.buildings)
+        #anim.updateAnimation(self.buildings, 0)
+        #print trials
 
 
     # Initializes the grid with non overlapping buildings, at random positions.
@@ -495,9 +495,6 @@ class Grid(object):
         return newPrice
 
     def newRandomPosGA(self, building, grid):
-        currentX = building.x
-        currentY = building.y
-
         newX = random.random() * grid.width
         newY = random.random() * grid.depth
         building.newPosition(newX, newY)
@@ -1154,6 +1151,7 @@ def translatingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
 
 def geneticAlgorithm(popsize, generations, aantalhuizen, gridWidth, gridDepth):
 
+
     gencount = 0
 
     while gencount < generations:
@@ -1161,6 +1159,7 @@ def geneticAlgorithm(popsize, generations, aantalhuizen, gridWidth, gridDepth):
         # Creating starting situation.
         if gencount == 0:
             population = GAstart(popsize, aantalhuizen, gridWidth, gridDepth)
+            print "Starting evolution..."
 
         # Sort by value (high to low).
         population = sorted(population, key=itemgetter(1), reverse=True)
@@ -1174,9 +1173,14 @@ def geneticAlgorithm(popsize, generations, aantalhuizen, gridWidth, gridDepth):
         gencount += 1
         print "This is generation", gencount
 
+
     population = sorted(population, key=itemgetter(1), reverse=True)
-    #anim = GridVisualisation(gridWidth, gridDepth, population[0][0].buildings, population[0][1])
-    #anim.emptyAnimation(population[0][0].buildings)
+    anim = GridVisualisation(gridWidth, gridDepth, population[0][0].buildings, population[0][1])
+    anim.emptyAnimation(population[0][0].buildings)
+
+    print "########"
+    print "Evolution finished"
+    print "Final value:", population[0][1]
 
     return population
 
@@ -1185,10 +1189,11 @@ def GAstart(popsize, aantalhuizen, gridWidth, gridDepth):
     # Create initial population.
     poplist = []
 
+    print 'Generating start state...'
     for i in range(0, popsize):
         templist = []
         grid = Grid(gridWidth, gridDepth, aantalhuizen)
-        grid.randomPlacements()
+        grid.randomPlacements2()
         templist.append(grid)
         totalprice = grid.calcTotalPrice()[0]
         templist.append(totalprice)
@@ -1200,66 +1205,7 @@ def createGeneration(popsize, population, aantalhuizen, gridWidth, gridDepth):
     new_pop = []
     # Builds a single candidate every iteration.
     while len(new_pop) < popsize:
-        candidates = []
-
-        # Pick three random candidates from population.
-        for i in range(3):
-            randomcandidate = random.choice(population)
-
-            # Candidates can't be the same.
-            if randomcandidate in candidates:
-                randomcandidate = random.choice(population)
-
-            candidates.append(randomcandidate[0])
-
-        buildingchoices = ['b', 'e', 'm']
-
-        grid = Grid(gridWidth, gridDepth, aantalhuizen)
-
-        #
-        # Create crossover.
-        #
-
-        # Adds one kind of building from each selected candidate to new candidate.
-        for candidate in candidates:
-
-            selectchance = random.choice(buildingchoices)
-            buildingchoices.remove(selectchance)
-
-            for building in candidate.buildings:
-
-                if selectchance == 'b' and building.name[0] == selectchance:
-                    grid.addBuilding(building)
-                    # Check if placing is correct.
-                    checkHouse(grid, building)
-
-                elif selectchance == 'e' and building.name[0] == selectchance:
-                    grid.addBuilding(building)
-                    # Check if placing is correct.
-                    checkHouse(grid, building)
-
-                elif selectchance == 'm' and building.name[0] == selectchance:
-                    grid.addBuilding(building)
-                    # Check if placing is correct.
-                    checkHouse(grid, building)
-
-        #
-        # Mutate the crossover.
-        #
-
-        # Choose random amount of mutations.
-        mutations = random.randint(1, aantalhuizen)
-
-        for i in range(mutations):
-            # Choose a random house to mutate.
-            randombuilding = grid.buildings[random.randrange(0, aantalhuizen)]
-
-            # Mutate the house by giving it a new position.
-            grid.newRandomPosGA(randombuilding, grid)
-
-            # Change position if it doesn't meet the constraints.
-            checkHouse(grid, randombuilding)
-
+        grid = createCandidate(population, aantalhuizen, gridWidth, gridDepth)
 
         # Candidate has evolved. Add to the new population.
         templist = []
@@ -1269,6 +1215,99 @@ def createGeneration(popsize, population, aantalhuizen, gridWidth, gridDepth):
         new_pop.append(templist)
 
     return new_pop
+
+
+def createCandidate(population, aantalhuizen, gridWidth, gridDepth):
+    #print 'evolving'
+    candidates = []
+
+    # Pick three random candidates from population.
+    for i in range(3):
+        randomcandidate = random.choice(population)
+
+        # Candidates can't be the same.
+        if randomcandidate in candidates:
+            randomcandidate = random.choice(population)
+
+        candidates.append(randomcandidate[0])
+
+#        buildingchoices = ['b', 'e', 'm']
+
+    grid = Grid(gridWidth, gridDepth, aantalhuizen)
+
+    #
+    # Create crossover.
+    # NOT WORKING (due to overlap).
+
+    # Adds one kind of building from each selected candidate to new candidate.
+#        for candidate in candidates:
+
+#            selectchance = random.choice(buildingchoices)
+#            buildingchoices.remove(selectchance)
+
+#            for building in candidate.buildings:
+
+#               if selectchance == 'b' and building.name[0] == selectchance:
+#                    grid.addBuilding(building)
+                # Check if placing is correct.
+#                    checkHouse(grid, building)
+
+#                elif selectchance == 'e' and building.name[0] == selectchance:
+#                    grid.addBuilding(building)
+                # Check if placing is correct.
+#                    checkHouse(grid, building)
+
+#                elif selectchance == 'm' and building.name[0] == selectchance:
+#                    grid.addBuilding(building)
+                # Check if placing is correct.
+#                    checkHouse(grid, building)
+
+
+    #
+    # Create crossover.
+    #
+
+
+    count = 0
+    for candidate in candidates:
+        if count == 0:
+            for building in candidate.buildings:
+                if building.name[0] == 'm':
+                    grid.addBuilding(building)
+                    checkHouse(grid, building)
+
+        elif count == 1:
+            for building in candidate.buildings:
+                if building.name[0] == 'b':
+                    grid.addBuilding(building)
+                    checkHouse(grid, building)
+
+        else:
+            for building in candidate.buildings:
+                if building.name[0] == 'e':
+                    grid.addBuilding(building)
+                    checkHouse(grid, building)
+
+        count += 1
+
+    #
+    # Mutate the crossover.
+    #
+
+    # Choose random amount of mutations.
+    mutations = random.randint(1, aantalhuizen)
+
+    for i in range(mutations):
+        # Choose a random house to mutate.
+        randombuilding = grid.buildings[random.randrange(0, aantalhuizen)]
+
+        # Mutate the house by giving it a new position.
+        grid.newRandomPosGA(randombuilding, grid)
+
+        # Change position if it doesn't meet the constraints.
+        checkHouse(grid, randombuilding)
+
+    return grid
 
 
 def checkHouse(grid, building):
@@ -1363,8 +1402,8 @@ if __name__ == '__main__':
 ##    print 'Total', grid.calcTotalPrice()
 ##    print grid.findOverlap2(M)
 ##
-    precision = 1.0
-    grid = Grid(120, 160, 2)
+#    precision = 1.0
+    #grid = Grid(120, 160, 2)
 
 
     #a = translatingRandomSample2(20, 120, 160, 0.5)
@@ -1372,7 +1411,7 @@ if __name__ == '__main__':
     #b = rotatingRandomSample2(20, 120, 160, 0.5)
     #c = SAswappingRandomSample2(20, 120, 160, 0.5)
     #d = combinationRandomSample2(60, 120, 160, 0.5)
-    e = combinationRandomSample2SA(20, 120, 160, 0.5)
+    #e = combinationRandomSample2SA(20, 120, 160, 0.5)
     #grid.randomPlacements2()
 
 ##    file = open('results.csv', 'wb+')
@@ -1384,10 +1423,10 @@ if __name__ == '__main__':
 ##    simulations = 100000
 ##    grid.updateGrid(simulations)
 
-    #precision = 1.0
-    #generaties = 1
-    #populatie = 12
-    #geneticAlgorithm(populatie, generaties, 20, 120, 160)
+    precision = 1.0
+    generaties = 10
+    populatie = 100
+    geneticAlgorithm(populatie, generaties, 20, 120, 160)
 
     # ====== TEST RUNS ======= #
     #b1 = EengezinsWoning(15,15)
