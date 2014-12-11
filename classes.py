@@ -319,30 +319,47 @@ class Grid(object):
         return shortestDist
 
 
+    def calcVrijstand(self, building):
+        vrijstand = self.findShortestDist(building)
+        building.updateVrijstand(vrijstand)
+
+        return vrijstand
+
     def calcPrice(self, building):
         """
-        Calculate the price of a single house. Returns the price and the vrijstand
+        Calculate the price of a single house. Returns the price.
         """
-        extravrijstand = self.findShortestDist(building) - building.vrijstand
+        extravrijstand = self.calcVrijstand(building) - building.vrijstand
         prijsverb = building.percentage * extravrijstand + 1
         huisprijs = building.value * prijsverb
+        building.updateValue(huisprijs)
 
-        return float(huisprijs), float(extravrijstand)
+        return float(huisprijs)
 
     def calcTotalPrice(self):
         """
-        Calculates the total price for all buildings on the grid and the total
+        Calculates the total price for all buildings on the grid.
         vrijstand.
         """
-        totalPrice = 0
-        totalExtraVrijstand = 0
-
+        totalprice = 0
         for building in self.buildings:
-            priceAndVrijstand = self.calcPrice(building)
-            totalPrice += priceAndVrijstand[0]
-            totalExtraVrijstand += priceAndVrijstand[1]
+            self.calcPrice(building)
+            price = building.currentvalue
+            totalprice += price
 
-        return totalPrice, totalExtraVrijstand
+        return totalprice
+
+    def calcTotalVrijstand(self):
+        """
+        Calculates the total vrijstand for all buildings.
+        """
+        totalvrijstand = 0
+        for building in self.buildings:
+            self.calcVrijstand(building)
+            vrijstand = building.currentvrijstand
+            totalvrijstand += vrijstand
+
+        return totalvrijstand
 
     def randomPlacements(self):
         self.buildings = []
@@ -485,7 +502,7 @@ class Grid(object):
 
         # If position valid calculate the new price
         if not self.findOverlap2(building):
-            newPrice = self.calcTotalPrice()[0]
+            newPrice = self.calcTotalPrice()
         else:
             newPrice = 0
 
@@ -524,7 +541,7 @@ class Grid(object):
 
         # If position valid calculate the new price
         if not self.findOverlap2(building):
-            newPrice = self.calcTotalPrice()[0]
+            newPrice = self.calcTotalPrice()
         else:
             newPrice = 0
 
@@ -547,7 +564,7 @@ class Grid(object):
         self.swapBuilding(building1, building2)
 
         if not self.findOverlap2(building1) and not self.findOverlap2(building2):
-            newPrice = self.calcTotalPrice()[0]
+            newPrice = self.calcTotalPrice()
         else:
             newPrice = 0
 
@@ -567,7 +584,7 @@ class Grid(object):
         self.swapBuilding(building1, building2)
 
         if not self.findOverlap2(building1) and not self.findOverlap2(building2):
-            newPrice = self.calcTotalPrice()[0]
+            newPrice = self.calcTotalPrice()
         else:
             newPrice = 0
 
@@ -585,7 +602,7 @@ class Grid(object):
         self.buildings[ID].newAngle(newAngle)
 
         if not self.findOverlap2(self.buildings[ID]):
-            newPrice = self.calcTotalPrice()[0]
+            newPrice = self.calcTotalPrice()
         else:
             newPrice = 0
 
@@ -602,7 +619,7 @@ def rotatingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
     grid = Grid(gridWidth, gridDepth, aantalhuizen)
     grid.randomPlacements2()
 
-    newPrice = grid.calcTotalPrice()[0]
+    newPrice = grid.calcTotalPrice()
     previousPrice = newPrice
     priceDevelopment = [newPrice]
 
@@ -660,7 +677,7 @@ def translatingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
     grid = Grid(gridWidth, gridDepth, aantalhuizen)
     grid.randomPlacements2()
 
-    newPrice = grid.calcTotalPrice()[0]
+    newPrice = grid.calcTotalPrice()
     previousPrice = newPrice
     priceDevelopment = [newPrice]
 
@@ -716,7 +733,7 @@ def SAtranslatingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
     grid = Grid(gridWidth, gridDepth, aantalhuizen)
     grid.randomPlacements2()
 
-    newPrice = grid.calcTotalPrice()[0]
+    newPrice = grid.calcTotalPrice()
     previousPrice = newPrice
     priceDevelopment = [newPrice]
 
@@ -772,7 +789,7 @@ def swappingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
     grid = Grid(gridWidth, gridDepth, aantalhuizen)
     grid.randomPlacements2()
 
-    newPrice = grid.calcTotalPrice()[0]
+    newPrice = grid.calcTotalPrice()
     previousPrice = newPrice
     priceDevelopment = [newPrice]
 
@@ -833,7 +850,7 @@ def SAswappingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
     grid = Grid(gridWidth, gridDepth, aantalhuizen)
     grid.randomPlacements2()
 
-    newPrice = grid.calcTotalPrice()[0]
+    newPrice = grid.calcTotalPrice()
     previousPrice = newPrice
     priceDevelopment = [newPrice]
 
@@ -893,7 +910,7 @@ def combinationRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
     grid = Grid(gridWidth, gridDepth, aantalhuizen)
     grid.randomPlacements2()
 
-    newPrice = grid.calcTotalPrice()[0]
+    newPrice = grid.calcTotalPrice()
     previousPrice = newPrice
     priceDevelopment = [newPrice]
 
@@ -961,7 +978,7 @@ def combinationRandomSample2SA(aantalhuizen, gridWidth, gridDepth, step):
     grid = Grid(gridWidth, gridDepth, aantalhuizen)
     grid.randomPlacements2()
 
-    newPrice = grid.calcTotalPrice()[0]
+    newPrice = grid.calcTotalPrice()
     previousPrice = newPrice
     priceDevelopment = [newPrice]
 
@@ -1026,7 +1043,7 @@ def translatingRandomSample(aantalhuizen, gridWidth, gridDepth, step):
     grid.randomPlacements2()
 
     previousPrice = -1
-    totalPrice = grid.calcTotalPrice()[0]
+    totalPrice = grid.calcTotalPrice()
     priceDevelopment = [totalPrice]
 
     anim = GridVisualisation(gridWidth, gridDepth, grid.buildings, 0)
@@ -1039,35 +1056,35 @@ def translatingRandomSample(aantalhuizen, gridWidth, gridDepth, step):
         if i%1==0:
             anim.emptyAnimation(grid.buildings)
             anim.updateAnimation(grid.buildings, 0)
-        previousPrice = grid.calcTotalPrice()[0]
+        previousPrice = grid.calcTotalPrice()
 
         for building in grid.buildings:
 
             # Try to move to the right
             building.translate(step, 0)
             if not grid.findOverlap2(building):
-                right = grid.calcTotalPrice()[0]
+                right = grid.calcTotalPrice()
             else:
                 right = -1
 
             # Move back and move one up
             building.translate(-step, step)
             if not grid.findOverlap2(building):
-                up = grid.calcTotalPrice()[0]
+                up = grid.calcTotalPrice()
             else:
                 up = -1
 
             # Move back and move to the left
             building.translate(-step, -step)
             if not grid.findOverlap2(building):
-                left = grid.calcTotalPrice()[0]
+                left = grid.calcTotalPrice()
             else:
                 left = -1
 
             # Move back and move down
             building.translate(step, -step)
             if not grid.findOverlap2(building):
-                down = grid.calcTotalPrice()[0]
+                down = grid.calcTotalPrice()
             else:
                 down = -1
 
@@ -1083,7 +1100,7 @@ def translatingRandomSample(aantalhuizen, gridWidth, gridDepth, step):
                 else:
                     building.translate(0, -step)
 
-                totalPrice = grid.calcTotalPrice()[0]
+                totalPrice = grid.calcTotalPrice()
         priceDevelopment.append(totalPrice)
         i += 1
 
@@ -1104,7 +1121,7 @@ def translatingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
     grid = Grid(gridWidth, gridDepth, aantalhuizen)
     grid.randomPlacements2()
 
-    newPrice = grid.calcTotalPrice()[0]
+    newPrice = grid.calcTotalPrice()
     previousPrice = newPrice
     priceDevelopment = [newPrice]
 
@@ -1151,8 +1168,18 @@ def translatingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
 
     return priceDevelopment
 
-def geneticAlgorithm(popsize, generations, aantalhuizen, gridWidth, gridDepth):
-
+def geneticAlgorithm(popsize, generations, aantalhuizen, gridWidth, gridDepth, score):
+    """
+    This function uses a genetic algorithm to produce an 'optimized' map.
+    :param int popsize: Size of population.
+    :param int generations: Amount of generations that should be generated.
+    :param int aantalhuizen: Amount of buildings in a candidate
+    :param int gridWidth: Width of the candidate.
+    :param int gridDepth: Depth of candidate
+    :param str score: Kind of score that should be optimized.
+            'v' = optimal vrijstand. 'p' = optimal price.
+    :return: List containing final population, sorted on score from high to low.
+    """
 
     gencount = 0
 
@@ -1160,7 +1187,7 @@ def geneticAlgorithm(popsize, generations, aantalhuizen, gridWidth, gridDepth):
 
         # Creating starting situation.
         if gencount == 0:
-            population = createStartPopulation(popsize, aantalhuizen, gridWidth, gridDepth)
+            population = createStartPopulation(popsize, aantalhuizen, gridWidth, gridDepth, score)
             print "Starting evolution..."
 
         # Sort by value (high to low).
@@ -1170,7 +1197,7 @@ def geneticAlgorithm(popsize, generations, aantalhuizen, gridWidth, gridDepth):
         population = population[:len(population) / 2]
 
         # Create new generation.
-        population = createGeneration(popsize, population, aantalhuizen, gridWidth, gridDepth)
+        population = createGeneration(popsize, population, aantalhuizen, gridWidth, gridDepth, score)
 
         gencount += 1
         print "This is generation", gencount
@@ -1187,7 +1214,7 @@ def geneticAlgorithm(popsize, generations, aantalhuizen, gridWidth, gridDepth):
     return population
 
 
-def createStartPopulation(popsize, aantalhuizen, gridWidth, gridDepth):
+def createStartPopulation(popsize, aantalhuizen, gridWidth, gridDepth, score):
     # Create initial population.
     print 'Generating start state...'
     poplist = []
@@ -1208,8 +1235,12 @@ def createStartPopulation(popsize, aantalhuizen, gridWidth, gridDepth):
         for i in list(return_dict.values()):
             templist = []
             templist.append(i)
-            totalprice = i.calcTotalPrice()[0]
-            templist.append(totalprice)
+            if score == 'p':
+                totalscore = i.calcTotalPrice()
+            elif score == 'v':
+                totalscore = i.calcTotalVrijstand()
+
+            templist.append(totalscore)
             poplist.append(templist)
 
         print len(poplist), "random candidates generated."
@@ -1222,7 +1253,7 @@ def createRandomCandidate(aantalhuizen, gridWidth, gridDepth, return_dict):
     return_dict[grid] = grid
 
 
-def createGeneration(popsize, population, aantalhuizen, gridWidth, gridDepth):
+def createGeneration(popsize, population, aantalhuizen, gridWidth, gridDepth, score):
     new_pop = []
     # Builds a single candidate every iteration.
     while len(new_pop) < popsize:
@@ -1241,8 +1272,12 @@ def createGeneration(popsize, population, aantalhuizen, gridWidth, gridDepth):
         for i in list(return_dict.values()):
             templist = []
             templist.append(i)
-            totalprice = i.calcTotalPrice()[0]
-            templist.append(totalprice)
+            if score == 'p':
+                totalscore = i.calcTotalPrice()
+            elif score == 'v':
+                totalscore = i.calcTotalVrijstand()
+
+            templist.append(totalscore)
             new_pop.append(templist)
         print len(new_pop), "candidates evolved."
 
@@ -1268,37 +1303,10 @@ def createCandidate(population, aantalhuizen, gridWidth, gridDepth, return_dict)
 
     #
     # Create crossover.
-    # NOT WORKING (due to overlap).
-
-    # Adds one kind of building from each selected candidate to new candidate.
-#        for candidate in candidates:
-
-#            selectchance = random.choice(buildingchoices)
-#            buildingchoices.remove(selectchance)
-
-#            for building in candidate.buildings:
-
-#               if selectchance == 'b' and building.name[0] == selectchance:
-#                    grid.addBuilding(building)
-                # Check if placing is correct.
-#                    checkHouse(grid, building)
-
-#                elif selectchance == 'e' and building.name[0] == selectchance:
-#                    grid.addBuilding(building)
-                # Check if placing is correct.
-#                    checkHouse(grid, building)
-
-#                elif selectchance == 'm' and building.name[0] == selectchance:
-#                    grid.addBuilding(building)
-                # Check if placing is correct.
-#                    checkHouse(grid, building)
-
-
-    #
-    # Create crossover.
     #
 
-
+    # Take one type of house from each candidate, and add to new candidate.
+    # Places house somewhere else if there is overlap.
     count = 0
     for candidate in candidates:
         if count == 0:
@@ -1326,7 +1334,7 @@ def createCandidate(population, aantalhuizen, gridWidth, gridDepth, return_dict)
     #
 
     # Choose random amount of mutations.
-    mutations = random.randint(1, aantalhuizen)
+    mutations = random.randint(1, aantalhuizen / 5)
 
     for i in range(mutations):
         # Choose a random house to mutate.
@@ -1394,6 +1402,14 @@ class EengezinsWoning(Building):
         self.value = 285000
         self.percentage = .03
         self.vrijstand = 2
+        self.currentvalue = 0
+        self.currentvrijstand = 0
+
+    def updateValue(self, price):
+        self.currentvalue = price
+
+    def updateVrijstand(self, vrijstand):
+        self.currentvrijstand = vrijstand
 
 class Bungalow(Building):
     def __init__(self, x, y, angle, gridWidth, gridDepth):
@@ -1404,7 +1420,16 @@ class Bungalow(Building):
         self.value = 399000
         self.percentage = .04
         self.vrijstand = 3
-        
+        self.currentvalue = 0
+        self.currentvrijstand = 0
+
+    def updateValue(self, price):
+        self.currentvalue = price
+
+    def updateVrijstand(self, vrijstand):
+        self.currentvrijstand = vrijstand
+
+
 class Maison(Building):
     def __init__(self, x, y, angle, gridWidth, gridDepth):
         Building.__init__(self, x, y, angle, gridWidth, gridDepth)
@@ -1414,125 +1439,21 @@ class Maison(Building):
         self.value = 610000
         self.percentage = .06
         self.vrijstand = 6
+        self.currentvalue = 0
+        self.currentvrijstand = 0
+
+    def updateValue(self, price):
+        self.currentvalue = price
+
+    def updateVrijstand(self, vrijstand):
+        self.currentvrijstand = vrijstand
 
 
 #====================MAIN THREAD ===================================#
 if __name__ == '__main__':
 
-    processes = 100 # Amount of simultaneous processes. Shouldn't exceed popluatie.
+    processes = 5 # Amount of simultaneous processes. Shouldn't exceed popluatie.
     precision = 1.0
-    generaties = 100
-    populatie = 500
-    geneticAlgorithm(populatie, generaties, 60, 120, 160)
-##    E = EengezinsWoning(10, 10, 0, 100, 100)
-##    B = Bungalow(50, 0, 0, 100, 100)
-##    M = Maison(94.0001, 50, 180, 100, 100)
-##
-##    grid = Grid(100, 100, 5)
-##    grid.addBuilding(E)
-##    grid.addBuilding(B)
-##    grid.addBuilding(M)
-##
-##    print 'Eengezinswoning', grid.calcPrice(E)
-##    print 'Bungalow', grid.calcPrice(B)
-##    print 'Maison', grid.calcPrice(M)
-##    print 'Total', grid.calcTotalPrice()
-##    print grid.findOverlap2(M)
-##
-#    precision = 1.0
-    #grid = Grid(120, 160, 2)
-
-
-    #a = translatingRandomSample2(20, 120, 160, 0.5)
-    #b = SAtranslatingRandomSample2(60, 120, 160, 0.5)
-    #b = rotatingRandomSample2(20, 120, 160, 0.5)
-    #c = SAswappingRandomSample2(20, 120, 160, 0.5)
-    #d = combinationRandomSample2(60, 120, 160, 0.5)
-    #e = combinationRandomSample2SA(20, 120, 160, 0.5)
-    #grid.randomPlacements2()
-
-##    file = open('results.csv', 'wb+')
-##    writer = csv.writer(file)
-##    writer.writerow(['Distance', 'Prijs'])
-
-##    precision = 1.0
-##    grid = Grid(120., 160., 60)
-##    simulations = 100000
-##    grid.updateGrid(simulations)
-
-
-    # ====== TEST RUNS ======= #
-    #b1 = EengezinsWoning(15,15)
-    #b2 = Maison(3,3)
-    #grid = Grid(100,100,2)
-    #grid.addBuilding(b1)
-    #grid.addBuilding(b2)
-    #print grid.buildings[0].x, grid.buildings[0].y
-
-    #print grid.findOverlap(b1,b2)
-    #print grid.findDistance(b1,b2)
-
-    #b1 = EengezinsWoning(30,30)
-    #b2 = EengezinsWoning(55,35)
-    #grid = Grid(100,100,2)
-    #grid.addBuilding(b1)
-    #grid.addBuilding(b2)
-    #print grid.findDistance(b1, b2)
-    #print grid.findDistance(b2, b1)
-
-    #print "Rotatie", grid.findOverlap(b1,b2)
-    #print grid.cornerInBuilding(b1,b2)
-    #print grid.cornerInBuilding(b2,b1)
-
-    #b1 = Bungalow(19.,6.,1.)
-    #b2 = Maison(4.,1.,1.)
-    #grid = Grid(100,100,2,1)
-    #grid.addBuilding(b1)
-    #grid.addBuilding(b2)
-    #print 'overlap', grid.findOverlap(b1,b2)
-    #
-##    'distance', grid.findDistance(b1,b2)
-
-
-##    b1 = EengezinsWoning(80,80)
-##    b2 = Maison(77,82)
-##    grid = Grid(100,100,2)
-##    grid.addBuilding(b1)
-##    grid.addBuilding(b2)
-
-##    print "Rotatie", grid.findOverlap(b2,b1)
-
-##    print grid.buildings[0].x, grid.buildings[0].y
-##
-##    print grid.findOverlap(b1,b2)
-##    print grid.findDistance(b1,b2)
-
-
-##    grid = Grid(120, 140, 60)
-##    grid.updateGrid()
-    # Precision ratio to one meter. (0.5 is half meters, 0.1 is 10cm etc)
-
-    # Says False but should be True
-##    b1 = Maison(43.,10.,1.)
-##    b2 = Maison(45.,10.,1.)
-##    grid = Grid(60.,60.,2.,1.)
-##    grid.addBuilding(b1)
-##    grid.addBuilding(b2)
-##    print 'overlap', grid.findOverlap(b1,b2)
-##    print 'distance', grid.findDistance(b1,b2)
-
-#    b1 = Maison(0.,7.,1.)
-#    b2 = EengezinsWoning(13,13,1.)
-#    grid = Grid(100,100,2,1.)
-#    grid.addBuilding(b1)
-#    grid.addBuilding(b2)
-#    print 'overlap', grid.findOverlap(b1,b2)
-#    print 'distance', grid.findDistance(b1,b2)
-
-#    b1 = Bungalow(11.,10.,1.)
-#    b2 = Maison(0.,12.,1.)
-#    grid = Grid(30.,30.,3, 1.)
-#    grid.addBuilding(b1)
-#    grid.addBuilding(b2)
-#    print 'overlap', grid.findOverlap(b1,b2)
-#    print 'distance', grid.findDistance(b1,b2)
+    generaties = 5
+    populatie = 10
+    geneticAlgorithm(populatie, generaties, 60, 120, 160, 'v')
