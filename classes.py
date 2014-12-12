@@ -134,10 +134,11 @@ class Grid(object):
         shortestDist = float('inf')
         diagonal = math.sqrt(building.width**2 + building.depth**2) + math.sqrt(11**2 + 10.5**2)
         for neighbor in self.buildings:
-            dist = math.sqrt((building.x - neighbor.x)**2 + (building.y - neighbor.y)**2)
-            if dist < shortestDist:
-                shortestDist = dist
-        shortestDist = shortestDist + diagonal
+            if neighbor != building:
+                dist = math.sqrt((building.x - neighbor.x)**2 + (building.y - neighbor.y)**2)
+                if dist < shortestDist:
+                    shortestDist = dist
+        shortestDist += diagonal
 
         while i < len(self.buildings) and not buildingOverlap:
             dist = math.sqrt((building.x - self.buildings[i].x)**2 + (building.y - self.buildings[i].y)**2)
@@ -155,9 +156,9 @@ class Grid(object):
 
     def findOverlap(self, house1, house2):
         """ Checks whether house1 and house2 overlap and makes sure there is enough vrijstand """
-        if self.findDistance(house1, house2) >= house1.vrijstand and \
-           self.findDistance(house1, house2) >= house2.vrijstand:
-            return self.cornerInBuilding(house1, house2) or self.cornerInBuilding(house2, house1)
+        if self.findDistance(house1, house2) >= house1.vrijstand:
+            if self.findDistance(house1, house2) >= house2.vrijstand:
+                return self.cornerInBuilding(house1, house2) or self.cornerInBuilding(house2, house1)
         else:
             return True
 
@@ -315,8 +316,9 @@ class Grid(object):
                 newDist = self.findDistance(building, neighbor)
                 if newDist < shortestDist:
                     shortestDist = newDist
+                    shortestNeighbor = neighbor
 
-        return shortestDist
+        building.changeShortestDist(shortestDist, shortestNeighbor)
 
 
     def calcVrijstand(self, building):
@@ -329,23 +331,30 @@ class Grid(object):
         """
         Calculate the price of a single house. Returns the price.
         """
-        extravrijstand = self.calcVrijstand(building) - building.vrijstand
+        extravrijstand = building.shortestDist - building.vrijstand
         prijsverb = building.percentage * extravrijstand + 1
         huisprijs = building.value * prijsverb
         building.updateValue(huisprijs)
 
         return float(huisprijs)
 
-    def calcTotalPrice(self):
+    def calcTotalPrice(self, buildingsMoved):
         """
         Calculates the total price for all buildings on the grid.
         vrijstand.
         """
         totalprice = 0
-        for building in self.buildings:
+
+        for building in buildingsMoved:
+            self.findShortestDist(building)
             self.calcPrice(building)
             price = building.currentvalue
             totalprice += price
+
+        for building in self.buildings:
+            if building not in buildingsMoved:
+                if building.shortestNeighbor in buildingsMoved:
+                    self.findShortestDist(building)
 
         return totalprice
 
@@ -408,12 +417,12 @@ class Grid(object):
         noConfiguration = True
 
         while noConfiguration:
-            self. buildings = []
+            self.buildings = []
 
             trials += 1
 
-            #if trials % 1 == 0:
-                #print trials
+            if trials % 1 == 0:
+                print trials
 
             overlap = False
             i = 0
@@ -422,17 +431,17 @@ class Grid(object):
                 if i < .15 * self.aantalhuizen:
                     ran_x = random.random() * (self.width )
                     ran_y = random.random() * (self.depth )
-                    ran_angle = 0#random.randrange(0,360)
+                    ran_angle = random.randrange(0,360)
                     building = Maison(ran_x, ran_y, ran_angle, self.width, self.depth)
                 elif i < .4 * self.aantalhuizen:
                     ran_x = random.random() * (self.width )
                     ran_y = random.random() * (self.depth )
-                    ran_angle = 0#random.randrange(0,360)
+                    ran_angle = random.randrange(0,360)
                     building = Bungalow(ran_x, ran_y, ran_angle, self.width, self.depth)
                 else:
                     ran_x = random.random() * (self.width )
                     ran_y = random.random() * (self.depth )
-                    ran_angle = 0#random.randrange(0,360)
+                    ran_angle = random.randrange(0,360)
                     building = EengezinsWoning(ran_x, ran_y, ran_angle, self.width, self.depth)
 
                 overlap = self.findOverlap2(building)
@@ -445,10 +454,14 @@ class Grid(object):
                     randomTries += 1
 
             noConfiguration = overlap
-        #anim = GridVisualisation(self.width,self.depth, self.buildings, 0)
-        #anim.emptyAnimation(self.buildings)
-        #anim.updateAnimation(self.buildings, 0)
-        #print trials
+
+        for building in self.buildings:
+            self.findShortestDist(building)
+
+        anim = GridVisualisation(self.width,self.depth, self.buildings, 0)
+        anim.emptyAnimation(self.buildings)
+        anim.updateAnimation(self.buildings, 0)
+        print trials
 
 
     # Initializes the grid with non overlapping buildings, at random positions.
@@ -469,9 +482,9 @@ class Grid(object):
             self.randomPlacements()
 
             # Calculates the total prijsverb for all buildings.
-            totalPrice = self.calcTotalPrice()
-            totalprijsverb = totalPrice[0]
-            distance = totalPrice[1]
+            totalPrice = self.calcTotalPrice([])
+            totalprijsverb = totalPrice
+            distance = self.calcTotalVrijstand()
 
             # Remembers the best prijsverb.
             if totalprijsverb > best_prijsverb:
@@ -496,13 +509,17 @@ class Grid(object):
         currentX = building.x
         currentY = building.y
 
+        shortestDists = {}
+        for i in self.buildings:
+            shortestDists[i] = (i.shortestDist, i.shortestNeighbor)
+
         newX = random.random() * grid.width
         newY = random.random() * grid.depth
         building.newPosition(newX, newY)
 
         # If position valid calculate the new price
         if not self.findOverlap2(building):
-            newPrice = self.calcTotalPrice()
+            newPrice = self.calcTotalPrice([building])
         else:
             newPrice = 0
 
@@ -510,6 +527,10 @@ class Grid(object):
         # change back to previous configuration
         if newPrice <= previousPrice:
             building.newPosition(currentX, currentY)
+
+            for i in self.buildings:
+                i.shortestDist = shortestDists[i][0]
+                i.shortestNeighbor = shortestDists[i][1]
 
         return newPrice
 
@@ -519,19 +540,13 @@ class Grid(object):
         building.newPosition(newX, newY)
 
 
-
-    ##def randomTrans(self, building, previousPrice):
-        ##ranDist = random.random()
-        ##ranAngle = random.random() * 2 * math.pi
-
-        ##dx = ranDist * math.cos(ranAngle)
-        ##dy = ranDist * math.sin(ranAngle)
-        ##building.translate(dx, dy)
-
-
     def newRandomPosSA(self, building, previousPrice, t):
-        currentX = building.x
-        currentY = building.y
+        currentX = building.getX()
+        currentY = building.getY()
+
+        shortestDists = {}
+        for i in self.buildings:
+            shortestDists[i] = (i.shortestDist, i.shortestNeighbor)
 
         lifetime = 1000000
 
@@ -541,7 +556,7 @@ class Grid(object):
 
         # If position valid calculate the new price
         if not self.findOverlap2(building):
-            newPrice = self.calcTotalPrice()
+            newPrice = self.calcTotalPrice([building])
         else:
             newPrice = 0
 
@@ -553,38 +568,56 @@ class Grid(object):
             if random.random() > accept or newPrice == 0:
                 building.newPosition(currentX, currentY)
 
+                newPrice = previousPrice
+
+                for i in self.buildings:
+                    i.shortestDist = shortestDists[i][0]
+                    i.shortestNeighbor = shortestDists[i][1]
+
         return newPrice
 
     def swapBuildings(self, building1, building2, previousPrice):
-        currentX1 = building1.x
-        currentY1 = building1.y
-        currentX2 = building2.x
-        currentY2 = building2.y
+        currentX1 = building1.getX()
+        currentY1 = building1.getY()
+        currentX2 = building2.getX()
+        currentY2 = building2.getY()
+
+        shortestDists = {}
+        for i in self.buildings:
+            shortestDists[i] = (i.shortestDist, i.shortestNeighbor)
 
         self.swapBuilding(building1, building2)
 
         if not self.findOverlap2(building1) and not self.findOverlap2(building2):
-            newPrice = self.calcTotalPrice()
+            newPrice = self.calcTotalPrice([building1, building2])
         else:
             newPrice = 0
 
         if newPrice <= previousPrice:
             self.swapBuilding(building1, building2)
 
+            for i in self.buildings:
+                i.shortestDist = shortestDists[i][0]
+                i.shortestNeighbor = shortestDists[i][1]
+
         return newPrice
 
     def SAswapBuildings(self, building1, building2, previousPrice, t):
-        currentX1 = building1.x
-        currentY1 = building1.y
-        currentX2 = building2.x
-        currentY2 = building2.y
+        currentX1 = building1.getX()
+        currentY1 = building1.getY()
+        currentX2 = building2.getX()
+        currentY2 = building2.getY()
+
+        shortestDists = {}
+        for i in self.buildings:
+            shortestDists[i] = (i.shortestDist, i.shortestNeighbor)
 
         lifetime = 100000
 
         self.swapBuilding(building1, building2)
 
         if not self.findOverlap2(building1) and not self.findOverlap2(building2):
-            newPrice = self.calcTotalPrice()
+            newPrice = self.calcTotalPrice([building1, building2])
         else:
             newPrice = 0
 
@@ -593,81 +626,36 @@ class Grid(object):
             if random.random() > accept or newPrice == 0:
                 self.swapBuilding(building1, building2)
 
+                for i in self.buildings:
+                    i.shortestDist = shortestDists[i][0]
+                    i.shortestNeighbor = shortestDists[i][1]
+
+                newPrice = previousPrice
+
         return newPrice
 
-    def newRandomRot(self, ID, previousPrice):
-        currentAngle = self.buildings[ID].angle
+    def newRandomRot(self, building, previousPrice):
+        currentAngle = building.getAngle() * 360 / (2 * math.pi)
+
+        shortestDists = {}
+        for i in self.buildings:
+            shortestDists[i] = (i.shortestDist, i.shortestNeighbor)
 
         newAngle = random.random() * 360
-        self.buildings[ID].newAngle(newAngle)
 
-        if not self.findOverlap2(self.buildings[ID]):
-            newPrice = self.calcTotalPrice()
+        building.newAngle(newAngle)
+
+        if not self.findOverlap2(building):
+            newPrice = self.calcTotalPrice([building])
         else:
             newPrice = 0
 
         if newPrice <= previousPrice:
-            self.buildings[ID].newAngle(currentAngle)
+            building.newAngle(currentAngle)
 
-        return newPrice
-    
-    def newTranslatedPosSA(self, building, previousPrice, t):
-        currentX = building.getX()
-        currentY = building.getY()
-
-        lifetime = 1000000   
-        
-        distance = random.random() * 15
-        angle = random.randrange(0, 360)
-        if t%100==0:
-            print 'DISTANCE', distance
-             
-
-        newY = currentY + (math.sin(angle) * distance)
-        newX = currentX + (float(1.3) / math.cos(angle))
-        
-        building.newPosition(newX, newY)
-
-         # If position valid calculate the new price
-        if not self.findOverlap2(building):
-            newPrice = self.calcTotalPrice()[0]
-        else:
-            newPrice = 0
-
-        # When the new configuration has a higher total price keep it, else
-        # change back to previous configuration. There is a chance of accepting
-        # worse state depending on iteration and price difference
-        if newPrice <= previousPrice:
-            accept = math.exp((newPrice - previousPrice) * t / lifetime)
-            if random.random() > accept or newPrice == 0:
-                building.newPosition(currentX, currentY)
-
-        return newPrice
-
-    def newTranslatedPos(self, building, previousPrice):
-        currentX = building.getX()
-        currentY = building.getY()
-
-        lifetime = 1000000   
-        
-        distance = random.random() * 25
-        random.randrange(0, 360)
-
-        newY = currentY + (math.sin(angle) * distance)
-        newX = currentX + (float(1.3) / math.cos(angle))
-        
-        building.newPosition(newX, newY)
-
-         # If position valid calculate the new price
-        if not self.findOverlap2(building):
-            newPrice = self.calcTotalPrice()[0]
-        else:
-            newPrice = 0
-
-        # When the new configuration has a higher total price keep it, else
-        # change back to previous configuration
-        if newPrice <= previousPrice:                
-            building.newPosition(currentX, currentY)
+            for i in self.buildings:
+                i.shortestDist = shortestDists[i][0]
+                i.shortestNeighbor = shortestDists[i][1]
 
         return newPrice
 
@@ -679,7 +667,7 @@ def rotatingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
     grid = Grid(gridWidth, gridDepth, aantalhuizen)
     grid.randomPlacements2()
 
-    newPrice = grid.calcTotalPrice()
+    newPrice = grid.calcTotalPrice([])
     previousPrice = newPrice
     priceDevelopment = [newPrice]
 
@@ -689,70 +677,14 @@ def rotatingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
     i = 0
     noChange = 0
 
-    # When over 5000 iterations the change is less than 10 per iteration the
-    # loop is terminated
-    while noChange < 1000:
-
-        # Makes animation for every 1000th iteration
-        if i%100==0:
-            print i, previousPrice
-            anim.emptyAnimation(grid.buildings)
-            anim.updateAnimation(grid.buildings, 0)
-
-        # Choose random building
-        buildingID = random.randrange(0, aantalhuizen)
-
-        newPrice = grid.newRandomRot(buildingID, previousPrice)
-        priceDif = newPrice - previousPrice
-
-        if priceDif > 0:
-            previousPrice = newPrice
-
-        if priceDif < 10:
-            noChange += 1
-        else:
-            noChange = 0
-
-        priceDevelopment.append(previousPrice)
-        i += 1
-
-    iterations = [x for x in xrange(len(priceDevelopment))]
-    plt.plot(iterations, priceDevelopment)
-    plt.show()
-
-    anim.emptyAnimation(grid.buildings)
-    anim.updateAnimation(grid.buildings, 0)
-
-    print 'angles'
-    for building in grid.buildings:
-        print building.angle
-
-    return priceDevelopment
-
-def translatingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
-    """
-    Uses hillclimber algorithm to find local optimal solution. Uses translation.
-    """
-    # Define grid and place sample
-    grid = Grid(gridWidth, gridDepth, aantalhuizen)
-    grid.randomPlacements2()
-
-    newPrice = grid.calcTotalPrice()
-    previousPrice = newPrice
-    priceDevelopment = [newPrice]
-
-    anim = GridVisualisation(gridWidth, gridDepth, grid.buildings, 0)
-    anim.emptyAnimation(grid.buildings)
-
-    i = 0
-    noChange = 0
+    building0 = grid.buildings[0]
 
     # When over 5000 iterations the change is less than 10 per iteration the
     # loop is terminated
     while noChange < 5000:
 
         # Makes animation for every 1000th iteration
-        if i%1000==0:
+        if i%1==0:
             print i, previousPrice
             anim.emptyAnimation(grid.buildings)
             anim.updateAnimation(grid.buildings, 0)
@@ -760,8 +692,7 @@ def translatingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
         # Choose random building
         building = grid.buildings[random.randrange(0, aantalhuizen)]
 
-        newPrice = grid.newRandomPos(building, previousPrice)
-
+        newPrice = grid.newRandomRot(building, previousPrice)
         priceDif = newPrice - previousPrice
 
         if priceDif > 0:
@@ -776,11 +707,17 @@ def translatingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
         i += 1
 
     iterations = [x for x in xrange(len(priceDevelopment))]
-    plt.plot(iterations, priceDevelopment)
-    plt.show()
+    #plt.plot(iterations, priceDevelopment)
+    #plt.show()
+
+
 
     anim.emptyAnimation(grid.buildings)
     anim.updateAnimation(grid.buildings, 0)
+
+    print 'angles'
+    for building in grid.buildings:
+        print building.angle
 
     return priceDevelopment
 
@@ -793,7 +730,7 @@ def SAtranslatingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
     grid = Grid(gridWidth, gridDepth, aantalhuizen)
     grid.randomPlacements2()
 
-    newPrice = grid.calcTotalPrice()
+    newPrice = grid.calcTotalPrice([])
     previousPrice = newPrice
     priceDevelopment = [newPrice]
 
@@ -820,8 +757,7 @@ def SAtranslatingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
 
         priceDif = newPrice - previousPrice
 
-        if priceDif > 0:
-            previousPrice = newPrice
+        previousPrice = newPrice
 
         if priceDif < 10:
             noChange += 1
@@ -849,7 +785,7 @@ def swappingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
     grid = Grid(gridWidth, gridDepth, aantalhuizen)
     grid.randomPlacements2()
 
-    newPrice = grid.calcTotalPrice()
+    newPrice = grid.calcTotalPrice([])
     previousPrice = newPrice
     priceDevelopment = [newPrice]
 
@@ -910,7 +846,7 @@ def SAswappingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
     grid = Grid(gridWidth, gridDepth, aantalhuizen)
     grid.randomPlacements2()
 
-    newPrice = grid.calcTotalPrice()
+    newPrice = grid.calcTotalPrice([])
     previousPrice = newPrice
     priceDevelopment = [newPrice]
 
@@ -941,8 +877,7 @@ def SAswappingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
 
         priceDif = newPrice - previousPrice
 
-        if priceDif > 0:
-            previousPrice = newPrice
+        previousPrice = newPrice
 
         if priceDif < 10:
             noChange += 1
@@ -970,7 +905,7 @@ def combinationRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
     grid = Grid(gridWidth, gridDepth, aantalhuizen)
     grid.randomPlacements2()
 
-    newPrice = grid.calcTotalPrice()
+    newPrice = grid.calcTotalPrice([])
     previousPrice = newPrice
     priceDevelopment = [newPrice]
 
@@ -1038,12 +973,12 @@ def combinationRandomSample2SA(aantalhuizen, gridWidth, gridDepth, step):
     grid = Grid(gridWidth, gridDepth, aantalhuizen)
     grid.randomPlacements2()
 
-    newPrice = grid.calcTotalPrice()
+    newPrice = grid.calcTotalPrice([])
     previousPrice = newPrice
     priceDevelopment = [newPrice]
 
-    anim = GridVisualisation(gridWidth, gridDepth, grid.buildings, 0)
-    anim.emptyAnimation(grid.buildings)
+    #anim = GridVisualisation(gridWidth, gridDepth, grid.buildings, 0)
+    #anim.emptyAnimation(grid.buildings)
 
     i = 0
     noChange = 0
@@ -1053,10 +988,10 @@ def combinationRandomSample2SA(aantalhuizen, gridWidth, gridDepth, step):
     while noChange < 5000:
 
         # Makes animation for every 1000th iteration
-        if i%1000==0:
-            print i, previousPrice
-            anim.emptyAnimation(grid.buildings)
-            anim.updateAnimation(grid.buildings, 0)
+        #if i%1000==0:
+            #print i, previousPrice
+            #anim.emptyAnimation(grid.buildings)
+            #anim.updateAnimation(grid.buildings, 0)
 
         # There is chance 0.2 to swap random buildings and 0.8 to translate
         # building
@@ -1077,8 +1012,7 @@ def combinationRandomSample2SA(aantalhuizen, gridWidth, gridDepth, step):
 
         priceDif = newPrice - previousPrice
 
-        if priceDif > 0:
-            previousPrice = newPrice
+        previousPrice = newPrice
 
         if priceDif < 10:
             noChange += 1
@@ -1092,10 +1026,10 @@ def combinationRandomSample2SA(aantalhuizen, gridWidth, gridDepth, step):
     #plt.plot(iterations, priceDevelopment)
     #plt.show()
 
-    anim.emptyAnimation(grid.buildings)
-    anim.updateAnimation(grid.buildings, 0)
+    #anim.emptyAnimation(grid.buildings)
+    #anim.updateAnimation(grid.buildings, 0)
 
-    return priceDevelopment
+    return priceDevelopment, grid.buildings
 
 
 def translatingRandomSample(aantalhuizen, gridWidth, gridDepth, step):
@@ -1103,7 +1037,7 @@ def translatingRandomSample(aantalhuizen, gridWidth, gridDepth, step):
     grid.randomPlacements2()
 
     previousPrice = -1
-    totalPrice = grid.calcTotalPrice()
+    totalPrice = grid.calcTotalPrice([])
     priceDevelopment = [totalPrice]
 
     anim = GridVisualisation(gridWidth, gridDepth, grid.buildings, 0)
@@ -1116,35 +1050,35 @@ def translatingRandomSample(aantalhuizen, gridWidth, gridDepth, step):
         if i%1==0:
             anim.emptyAnimation(grid.buildings)
             anim.updateAnimation(grid.buildings, 0)
-        previousPrice = grid.calcTotalPrice()
+        previousPrice = grid.calcTotalPrice([])
 
         for building in grid.buildings:
 
             # Try to move to the right
             building.translate(step, 0)
             if not grid.findOverlap2(building):
-                right = grid.calcTotalPrice()
+                right = grid.calcTotalPrice([])
             else:
                 right = -1
 
             # Move back and move one up
             building.translate(-step, step)
             if not grid.findOverlap2(building):
-                up = grid.calcTotalPrice()
+                up = grid.calcTotalPrice([])
             else:
                 up = -1
 
             # Move back and move to the left
             building.translate(-step, -step)
             if not grid.findOverlap2(building):
-                left = grid.calcTotalPrice()
+                left = grid.calcTotalPrice([])
             else:
                 left = -1
 
             # Move back and move down
             building.translate(step, -step)
             if not grid.findOverlap2(building):
-                down = grid.calcTotalPrice()
+                down = grid.calcTotalPrice([])
             else:
                 down = -1
 
@@ -1160,7 +1094,7 @@ def translatingRandomSample(aantalhuizen, gridWidth, gridDepth, step):
                 else:
                     building.translate(0, -step)
 
-                totalPrice = grid.calcTotalPrice()
+                totalPrice = grid.calcTotalPrice([])
         priceDevelopment.append(totalPrice)
         i += 1
 
@@ -1172,7 +1106,6 @@ def translatingRandomSample(aantalhuizen, gridWidth, gridDepth, step):
     anim.updateAnimation(grid.buildings, 0)
     return priceDevelopment
 
-
 def translatingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
     """
     Uses hillclimber algorithm to find local optimal solution. Uses translation.
@@ -1181,7 +1114,7 @@ def translatingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
     grid = Grid(gridWidth, gridDepth, aantalhuizen)
     grid.randomPlacements2()
 
-    newPrice = grid.calcTotalPrice()
+    newPrice = grid.calcTotalPrice([])[0]
     previousPrice = newPrice
     priceDevelopment = [newPrice]
 
@@ -1196,7 +1129,7 @@ def translatingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
     while noChange < 5000:
 
         # Makes animation for every 1000th iteration
-        if i%1000==0:
+        if i%1==0:
             print i, previousPrice
             anim.emptyAnimation(grid.buildings)
             anim.updateAnimation(grid.buildings, 0)
@@ -1296,7 +1229,7 @@ def createStartPopulation(popsize, aantalhuizen, gridWidth, gridDepth, score):
             templist = []
             templist.append(i)
             if score == 'p':
-                totalscore = i.calcTotalPrice()
+                totalscore = i.calcTotalPrice([])
             elif score == 'v':
                 totalscore = i.calcTotalVrijstand()
 
@@ -1333,7 +1266,7 @@ def createGeneration(popsize, population, aantalhuizen, gridWidth, gridDepth, sc
             templist = []
             templist.append(i)
             if score == 'p':
-                totalscore = i.calcTotalPrice()
+                totalscore = i.calcTotalPrice([])
             elif score == 'v':
                 totalscore = i.calcTotalVrijstand()
 
@@ -1451,6 +1384,9 @@ class Building(object):
     def newAngle(self, angle):
         # Give a new angle to building
         self.angle = angle * 2 * math.pi / 360
+    def changeShortestDist(self, shortestDist, shortestNeighbor):
+        self.shortestDist = shortestDist
+        self.shortestNeighbor = shortestNeighbor
 
 
 class EengezinsWoning(Building):
@@ -1512,8 +1448,8 @@ class Maison(Building):
 #====================MAIN THREAD ===================================#
 if __name__ == '__main__':
 
-    processes = 5 # Amount of simultaneous processes. Shouldn't exceed popluatie.
-    precision = 1.0
-    generaties = 5
-    populatie = 10
-    geneticAlgorithm(populatie, generaties, 60, 120, 160, 'v')
+    #processes = 5 # Amount of simultaneous processes. Shouldn't exceed popluatie.
+    #precision = 1.0
+    #generaties = 5
+    #populatie = 10
+    #geneticAlgorithm(populatie, generaties, 60, 120, 160, 'v')
