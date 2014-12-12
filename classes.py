@@ -322,7 +322,7 @@ class Grid(object):
 
 
     def calcVrijstand(self, building):
-        vrijstand = self.findShortestDist(building)
+        vrijstand = building.shortestDist
         building.updateVrijstand(vrijstand)
 
         return vrijstand
@@ -421,8 +421,8 @@ class Grid(object):
 
             trials += 1
 
-            if trials % 1 == 0:
-                print trials
+            #if trials % 1 == 0:
+                #print trials
 
             overlap = False
             i = 0
@@ -458,10 +458,10 @@ class Grid(object):
         for building in self.buildings:
             self.findShortestDist(building)
 
-        anim = GridVisualisation(self.width,self.depth, self.buildings, 0)
-        anim.emptyAnimation(self.buildings)
-        anim.updateAnimation(self.buildings, 0)
-        print trials
+        #anim = GridVisualisation(self.width,self.depth, self.buildings, 0)
+        #anim.emptyAnimation(self.buildings)
+        #anim.updateAnimation(self.buildings, 0)
+        #print trials
 
 
     # Initializes the grid with non overlapping buildings, at random positions.
