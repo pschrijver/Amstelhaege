@@ -610,6 +610,66 @@ class Grid(object):
             self.buildings[ID].newAngle(currentAngle)
 
         return newPrice
+    
+    def newTranslatedPosSA(self, building, previousPrice, t):
+        currentX = building.getX()
+        currentY = building.getY()
+
+        lifetime = 1000000   
+        
+        distance = random.random() * 15
+        angle = random.randrange(0, 360)
+        if t%100==0:
+            print 'DISTANCE', distance
+             
+
+        newY = currentY + (math.sin(angle) * distance)
+        newX = currentX + (float(1.3) / math.cos(angle))
+        
+        building.newPosition(newX, newY)
+
+         # If position valid calculate the new price
+        if not self.findOverlap2(building):
+            newPrice = self.calcTotalPrice()[0]
+        else:
+            newPrice = 0
+
+        # When the new configuration has a higher total price keep it, else
+        # change back to previous configuration. There is a chance of accepting
+        # worse state depending on iteration and price difference
+        if newPrice <= previousPrice:
+            accept = math.exp((newPrice - previousPrice) * t / lifetime)
+            if random.random() > accept or newPrice == 0:
+                building.newPosition(currentX, currentY)
+
+        return newPrice
+
+    def newTranslatedPos(self, building, previousPrice):
+        currentX = building.getX()
+        currentY = building.getY()
+
+        lifetime = 1000000   
+        
+        distance = random.random() * 25
+        random.randrange(0, 360)
+
+        newY = currentY + (math.sin(angle) * distance)
+        newX = currentX + (float(1.3) / math.cos(angle))
+        
+        building.newPosition(newX, newY)
+
+         # If position valid calculate the new price
+        if not self.findOverlap2(building):
+            newPrice = self.calcTotalPrice()[0]
+        else:
+            newPrice = 0
+
+        # When the new configuration has a higher total price keep it, else
+        # change back to previous configuration
+        if newPrice <= previousPrice:                
+            building.newPosition(currentX, currentY)
+
+        return newPrice
 
 def rotatingRandomSample2(aantalhuizen, gridWidth, gridDepth, step):
     """
