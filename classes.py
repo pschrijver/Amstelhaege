@@ -455,8 +455,8 @@ class Grid(object):
             shortestDists[i] = (i.shortestDist, i.shortestNeighbor)
 
         # Place building at a new random position
-        newX = random.random() * grid.width
-        newY = random.random() * grid.depth
+        newX = random.random() * self.width
+        newY = random.random() * self.depth
         building.newPosition(newX, newY)
 
         # If position valid calculate the new value
@@ -503,8 +503,8 @@ class Grid(object):
             shortestDists[i] = (i.shortestDist, i.shortestNeighbor)
 
         # Place building at a new random position
-        newX = random.random() * grid.width
-        newY = random.random() * grid.depth
+        newX = random.random() * self.width
+        newY = random.random() * self.depth
         building.newPosition(newX, newY)
 
         # If position valid calculate the new price
@@ -524,6 +524,8 @@ class Grid(object):
                 for i in self.buildings:
                     i.shortestDist = shortestDists[i][0]
                     i.shortestNeighbor = shortestDists[i][1]
+
+                newValue = previousValue
 
         return newValue
 
@@ -622,6 +624,8 @@ class Grid(object):
                     i.shortestDist = shortestDists[i][0]
                     i.shortestNeighbor = shortestDists[i][1]
 
+                newValue = previousValue
+
         return newValue
 
 
@@ -715,11 +719,18 @@ class Grid(object):
                     i.shortestDist = shortestDists[i][0]
                     i.shortestNeighbor = shortestDists[i][1]
 
+                newValue = previousValue
+
         return newValue
 
     def newTranslatedPosSA(self, building, previousValue, t, lifetime, optVar):
         currentX = building.getX()
         currentY = building.getY()
+
+        # Store current shortest distance and closest neighbor for every object
+        shortestDists = {}
+        for i in self.buildings:
+            shortestDists[i] = (i.shortestDist, i.shortestNeighbor)
 
         distance = random.random() * 15
         angle = random.randrange(0, 360)
@@ -746,11 +757,23 @@ class Grid(object):
             if random.random() > accept or newValue == 0:
                 building.newPosition(currentX, currentY)
 
+                # Change distance variables back to previous values
+                for i in self.buildings:
+                    i.shortestDist = shortestDists[i][0]
+                    i.shortestNeighbor = shortestDists[i][1]
+
+                newValue = previousValue
+
         return newValue
 
     def newTranslatedPos(self, building, previousValue, optVar):
         currentX = building.getX()
         currentY = building.getY()
+
+        # Store current shortest distance and closest neighbor for every object
+        shortestDists = {}
+        for i in self.buildings:
+            shortestDists[i] = (i.shortestDist, i.shortestNeighbor)
 
         distance = random.random() * 25
         random.randrange(0, 360)
@@ -770,6 +793,11 @@ class Grid(object):
         # change back to previous configuration
         if newValue <= previousValue:
             building.newPosition(currentX, currentY)
+
+            # Change distance variables back to previous values
+            for i in self.buildings:
+                i.shortestDist = shortestDists[i][0]
+                i.shortestNeighbor = shortestDists[i][1]
 
         return newValue
 
@@ -867,8 +895,7 @@ def rotatingRandomSampleSA(aantalhuizen, gridWidth, gridDepth, lifetime, optVar,
         newValue = grid.newRandomRotSA(building, previousValue, i, lifetime, optVar)
         valueDif = newValue - previousValue
 
-        if valueDif > 0:
-            previousValue = newValue
+        previousValue = newValue
 
         if valueDif < valueDifParam:
             noChange += 1
@@ -1145,8 +1172,8 @@ def combinationRandomSample2SA(aantalhuizen, gridWidth, gridDepth, lifetimeNewPo
     previousValue = newValue
     valueDevelopment = [newValue]
 
-    #anim = GridVisualisation(gridWidth, gridDepth, grid.buildings, 0)
-    #anim.emptyAnimation(grid.buildings)
+    anim = GridVisualisation(gridWidth, gridDepth, grid.buildings, 0)
+    anim.emptyAnimation(grid.buildings)
 
     i = 0
     noChange = 0
@@ -1156,10 +1183,10 @@ def combinationRandomSample2SA(aantalhuizen, gridWidth, gridDepth, lifetimeNewPo
     while noChange < noChangeParam:
 
         # Makes animation for every 1000th iteration
-        #if i%1000==0:
-            #print i, previousValue
-            #anim.emptyAnimation(grid.buildings)
-            #anim.updateAnimation(grid.buildings, 0)
+        if i%1000==0:
+            print i, previousValue
+            anim.emptyAnimation(grid.buildings)
+            anim.updateAnimation(grid.buildings, 0)
 
         # There is chance 0.2 to swap random buildings and 0.8 to translate
         # building
@@ -1172,6 +1199,7 @@ def combinationRandomSample2SA(aantalhuizen, gridWidth, gridDepth, lifetimeNewPo
                 building2 = grid.buildings[random.randrange(0, aantalhuizen)]
 
             newValue = grid.swapBuildingsSA(building1, building2, previousValue, i, lifetimeSwap, optVar)
+            
         else:
             # Choose random building
             building = grid.buildings[random.randrange(0, aantalhuizen)]
@@ -1713,7 +1741,7 @@ class Maison(Building):
 #====================MAIN THREAD ===================================#
 if __name__ == '__main__':
 
-#    precision = 1.0
+    precision = 1.0
 #    grid = Grid(120, 160, 2)
 
 
@@ -1759,20 +1787,21 @@ if __name__ == '__main__':
 
 
 
-    processes = 10 # Amount of simultaneous processes. Shouldn't exceed popluatie.
-    precision = 1.0
-    generaties = 5
-    populatie = 100
-    geneticAlgorithm(populatie, generaties, 20, 120, 160, 'p')
+    #processes = 10 # Amount of simultaneous processes. Shouldn't exceed popluatie.
+    #precision = 1.0
+    #generaties = 5
+    #populatie = 100
+    #geneticAlgorithm(populatie, generaties, 20, 120, 160, 'p')
 
 
     #a = translatingRandomSample2(20, 120, 160, 0)
-    #b = SAtranslatingRandomSample2(60, 120, 160, 2000, 0)
+    #b = SAtranslatingRandomSample2(60, 120, 160,0, 2000, 0)
     #b = rotatingRandomSample(20, 120, 160, 0, 5000, 10)
     #rotatingRandomSampleSA(20, 120, 160, 2000, 0, 200, 10)
     #b = rotatingRandomSampleSA(20, 120, 160, 2000, 0)
     #c = SAswappingRandomSample2(20, 120, 160, 2000, 0)
     #d = combinationRandomSample2(60, 120, 160, 0)
+    e = combinationRandomSample2SA(20, 120, 160, 2000, 1000, 0, 500, 10)
     #pr = cProfile.Profile()
     #pr.enable()
 ##    valueDevelopment = []
