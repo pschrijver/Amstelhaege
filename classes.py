@@ -12,6 +12,7 @@ import errno
 import cStringIO
 import multiprocessing
 from multiprocessing import Manager
+import copy
 
 # Uses code from the Robot assignment MIT
 
@@ -30,13 +31,13 @@ class GridVisualisation:
         self.width = int(self.width)
         self.height = int(self.height)
         distance = 0
-        
+
         # Initialize a drawing surface
         self.master = Tk()
         self.w = Canvas(self.master, width=1000, height=1000)
         self.w.pack()
         self.master.update()
-        
+
         # Draw a backing and lines
         x1, y1 = self._map_coords(0, 0)
         x2, y2 = self._map_coords(self.width, self.height)
@@ -53,18 +54,18 @@ class GridVisualisation:
 
         self.updateAnimation(self.buildings, '{:5,.2f}'.format(prijsverb))
         self.w.postscript(file="map.ps", colormode='color')
-                
+
     def emptyAnimation(self, buildings):
         self.w.delete('all')
         x1, y1 = self._map_coords(0, 0)
         x2, y2 = self._map_coords(self.width, self.height)
         self.w.create_rectangle(x1, y1, x2, y2, fill = "white")
-            
+
     def updateAnimation(self, buildings, prijsverb):
         " Updates the animation with a new list of buildings, for instance when"
         " buildings have been moved, this can be useful"
         for i in buildings:
-            
+
             x1, y1 = self._map_coords(i.x, i.y)
             x2, y2 = self._map_coords(i.x - i.depth * math.sin(i.angle),
                        i.y + i.depth * math.cos(i.angle))
@@ -72,33 +73,33 @@ class GridVisualisation:
                        i.y + i.depth * math.cos(i.angle) + i.width * math.sin(i.angle))
             x4, y4 = self._map_coords(i.x + i.width * math.cos(i.angle),
                        i.y + i.width * math.sin(i.angle))
-            
+
             points = [x1, y1, x2, y2, x3, y3, x4, y4]
 
-            
+
             if i.name == 'maison':
-                  self.w.create_polygon(points, 
+                  self.w.create_polygon(points,
                             fill='black')
-                  self.w.create_text((x1+22,y1-23), fill="white", text="score", font=("arial",8))
+                  #self.w.create_text((x1+22,y1-23), fill="white", text="score", font=("arial",8))
             if i.name == 'eengezinswoning':
-                  self.w.create_polygon(points, 
+                  self.w.create_polygon(points,
                             fill='red')
-                  self.w.create_text((x1+17,y1-17), fill="white", text="score", font=("arial",8))
+                  #self.w.create_text((x1+17,y1-17), fill="white", text="score", font=("arial",8))
             if i.name == 'bungalow':
                   self.w.create_polygon(points,
                             fill='blue')
-                  self.w.create_text((x1+19,y1-17), fill="white", text="score", font=("arial",8))
-        prijsverb = 'Prijsverbetering = ' + str(prijsverb) + ' euro'
+                  #self.w.create_text((x1+19,y1-17), fill="white", text="score", font=("arial",8))
+        prijsverb = 'Score = ' + str(prijsverb)
         self.w.create_text(20,20, anchor=W, font='arial', text=prijsverb)
 
         self.master.update()
         time.sleep(self.delay)
-        
+
     def _map_coords(self, x, y):
         "Maps grid positions to window positions (in pixels)."
         return (550 + 450 * ((x - self.width / 2.0) / self.max_dim),
                 350 + 450 * ((self.height / 2.0 - y) / self.max_dim))
-    
+
     def done(self):
         "Indicate that the animation is done so that we allow the user to close the window."
         mainloop()
@@ -145,21 +146,21 @@ class Grid(object):
                 if dist < shortestDist:
                     shortestDist = dist
         shortestDist += diagonal
-        
+
         while i < len(self.buildings) and not buildingOverlap:
             dist = math.sqrt((building.x - self.buildings[i].x)**2 + (building.y - self.buildings[i].y)**2)
-            
+
             if building != self.buildings[i] and dist <= shortestDist:
                 buildingOverlap = self.findOverlap(building, self.buildings[i])
             i += 1
 
         return buildingOverlap
-    
+
     def vrijstandMuren(self, house1):
            if house1.x - house1.vrijstand >= 0 and house1.x + house1.vrijstand + house1.width <= self.width and \
                house1.y - house1.vrijstand >= 0 and house1.y + house1.vrijstand + house1.depth <= self.depth:
                return True
-            
+
     def findOverlap(self, house1, house2):
         """ Checks whether house1 and house2 overlap and makes sure there is enough vrijstand """
         if self.findDistance(house1, house2) >= house1.vrijstand:
@@ -167,7 +168,7 @@ class Grid(object):
                 return self.cornerInBuilding(house1, house2) or self.cornerInBuilding(house2, house1)
         else:
             return True
-    
+
     def cornerInBuilding(self, house1, house2):
         """
         Checks whether a corner of house2 lies inside house1
@@ -187,21 +188,21 @@ class Grid(object):
         # frame where house1 has angle 0
         for corner in corners:
             r = math.sqrt((corner[0] - house1.x)**2 + (corner[1] - house1.y)**2)
-    
+
             try:
                 sign = (corner[1] - house1.y) / math.fabs(corner[1] - house1.y)
             except ZeroDivisionError:
                 sign = 1
-                
+
             if r != 0:
                 theta =  sign * math.acos((corner[0] - house1.x) / r)
-            
+
                 rotCorners.append((house1.x + r * math.cos(theta - house1.angle),
                                    house1.y + r * math.sin(theta - house1.angle)))
             else:
                 rotCorners.append((corner[0], corner[1]))
-                
-            
+
+
         # For every corner of house2 checks whether it lies inside house1
         for corner in rotCorners:
             if house1.x <= corner[0] and corner[0] <= house1.x + house1.width:
@@ -215,12 +216,12 @@ class Grid(object):
         The minimal required distance between buildings is not subtracted."""
 
 ##        assert(self.findOverlap(building1, building2) == False), 'Buildings overlap'
-        
+
         d = [(building1, building2), (building2, building1)]
         distancePerIteration = []
 
         for i in range(0, len(d)):
-            
+
             # Coordinates of all corners of d[i][1]
             corners2 = [(d[i][1].x, d[i][1].y)]
             corners2.append((d[i][1].x - d[i][1].depth * math.sin(d[i][1].angle),
@@ -229,7 +230,7 @@ class Grid(object):
                        d[i][1].y + d[i][1].depth * math.cos(d[i][1].angle) + d[i][1].width * math.sin(d[i][1].angle)))
             corners2.append((d[i][1].x + d[i][1].width * math.cos(d[i][1].angle),
                        d[i][1].y + d[i][1].width * math.sin(d[i][1].angle)))
-            
+
             rotCorners2 = []
             # rotate all corners by an angle -d[i][0].angle, so that we can work in the
             # frame where d[i][0] has angle 0
@@ -270,13 +271,13 @@ class Grid(object):
                         distances.append(corners1[0][0] - c2[0])
                     else:
                         distances.append(c2[0] - corners1[2][0])
-                        
+
             # find distances between all corners
             for c1 in corners1:
                 for c2 in rotCorners2:
                     distances.append(math.sqrt((c2[0] - c1[0])**2 + (c2[1] - c1[1])**2))
             distancePerIteration.append(min(distances))
-            
+
         # Returns the shortest distance between the buildings
         return min(distancePerIteration)
 
@@ -295,7 +296,7 @@ class Grid(object):
         building1.newPosition(x2, y2)
         building2.newPosition(x1, y1)
 
-        
+
     def addBuilding(self, building):
         """
         Adds a building to the grid.
@@ -303,7 +304,7 @@ class Grid(object):
         """
         return self.buildings.append(building)
 
-    
+
     def findShortestDist(self, building):
         """
         Finds shortest distance from var building to another building. Returns
@@ -361,18 +362,18 @@ class Grid(object):
             priceAndVrijstand = self.calcValue(building)
             totalPrice += priceAndVrijstand[0]
             totalExtraVrijstand += priceAndVrijstand[1]
-        
+
         for building in self.buildings:
             if building not in buildingsMoved:
                 if building.shortestNeighbor in buildingsMoved:
                     self.findShortestDist(building)
-                    
+
                 priceAndVrijstand = self.calcValue(building)
                 totalPrice += priceAndVrijstand[0]
                 totalExtraVrijstand += priceAndVrijstand[1]
 
         return totalPrice, totalExtraVrijstand
-    
+
     def randomPlacements(self):
         self.buildings = []
 
@@ -385,8 +386,8 @@ class Grid(object):
 
             trials += 1
 
-            if trials % 1 == 0:
-                print trials
+            #if trials % 1 == 0:
+            #    print trials
 
             overlap = False
             i = 0
@@ -421,7 +422,7 @@ class Grid(object):
 
         for building in self.buildings:
             self.findShortestDist(building)
-        
+
         #anim = GridVisualisation(self.width,self.depth, self.buildings, 0)
         #anim.emptyAnimation(self.buildings)
         #anim.updateAnimation(self.buildings, 0)
@@ -430,7 +431,9 @@ class Grid(object):
     def newRandomPosGA(self, building, grid):
         newX = random.random() * grid.width
         newY = random.random() * grid.depth
-        building.newPosition(newX, newY) 
+        building.newPosition(newX, newY)
+        newAngle = random.random() * 360
+        building.newAngle(newAngle)
 
     def newRandomPos(self, building, previousValue, optVar):
         """
@@ -464,14 +467,14 @@ class Grid(object):
 
         # When the new configuration has a higher total price keep it, else
         # change back to previous configuration
-        if newValue <= previousValue:                
+        if newValue <= previousValue:
             building.newPosition(currentX, currentY)
 
             # Change distance variables back to previous values
             for i in self.buildings:
                 i.shortestDist = shortestDists[i][0]
                 i.shortestNeighbor = shortestDists[i][1]
-        
+
         return newValue
 
 
@@ -497,7 +500,7 @@ class Grid(object):
         # Store current shortest distance and closest neighbor for every object
         shortestDists = {}
         for i in self.buildings:
-            shortestDists[i] = (i.shortestDist, i.shortestNeighbor)      
+            shortestDists[i] = (i.shortestDist, i.shortestNeighbor)
 
         # Place building at a new random position
         newX = random.random() * grid.width
@@ -517,7 +520,7 @@ class Grid(object):
             accept = math.exp((newValue - previousValue) * t / lifetime)
             if random.random() > accept or newValue == 0:
                 building.newPosition(currentX, currentY)
-                
+
                 for i in self.buildings:
                     i.shortestDist = shortestDists[i][0]
                     i.shortestNeighbor = shortestDists[i][1]
@@ -585,7 +588,7 @@ class Grid(object):
         for vrijstand)
         @return newValue: new value of the configuration
         """
-        
+
         currentX1 = building1.getX()
         currentY1 = building1.getY()
         currentX2 = building2.getX()
@@ -605,7 +608,7 @@ class Grid(object):
         else:
             newValue = 0
 
-        
+
         # When the new configuration has a higher total price keep it, else
         # change back to previous configuration. There is a chance of accepting
         # worse state depending on the number of iterations and price difference
@@ -621,7 +624,7 @@ class Grid(object):
 
         return newValue
 
-        
+
     def newRandomRot(self, building, previousValue, optVar):
         """
         Gives input building a new random angle, determines whether the position
@@ -633,7 +636,7 @@ class Grid(object):
         for vrijstand)
         @return newValue: new value of the configuration
         """
-        
+
         currentAngle = building.getAngle()
 
         # Store current shortest distance and closest neighbor for every object
@@ -661,7 +664,7 @@ class Grid(object):
             for i in self.buildings:
                 i.shortestDist = shortestDists[i][0]
                 i.shortestNeighbor = shortestDists[i][1]
-        
+
         return newValue
 
 
@@ -680,7 +683,7 @@ class Grid(object):
         for vrijstand)
         @return newValue: new value of the configuration
         """
-        
+
         currentAngle = building.getAngle()
 
         # Store current shortest distance and closest neighbor for every object
@@ -711,22 +714,22 @@ class Grid(object):
                 for i in self.buildings:
                     i.shortestDist = shortestDists[i][0]
                     i.shortestNeighbor = shortestDists[i][1]
-        
+
         return newValue
 
     def newTranslatedPosSA(self, building, previousValue, t, lifetime, optVar):
         currentX = building.getX()
-        currentY = building.getY() 
-        
+        currentY = building.getY()
+
         distance = random.random() * 15
         angle = random.randrange(0, 360)
         if t%100==0:
             print 'DISTANCE', distance
-             
+
 
         newY = currentY + (math.sin(angle) * distance)
         newX = currentX + (float(1.3) / math.cos(angle))
-        
+
         building.newPosition(newX, newY)
 
          # If position valid calculate the new price
@@ -748,13 +751,13 @@ class Grid(object):
     def newTranslatedPos(self, building, previousValue, optVar):
         currentX = building.getX()
         currentY = building.getY()
-        
+
         distance = random.random() * 25
         random.randrange(0, 360)
 
         newY = currentY + (math.sin(angle) * distance)
         newX = currentX + (float(1.3) / math.cos(angle))
-        
+
         building.newPosition(newX, newY)
 
          # If position valid calculate the new price
@@ -765,7 +768,7 @@ class Grid(object):
 
         # When the new configuration has a higher total price keep it, else
         # change back to previous configuration
-        if newValue <= previousValue:                
+        if newValue <= previousValue:
             building.newPosition(currentX, currentY)
 
         return newValue
@@ -780,7 +783,7 @@ def rotatingRandomSample(aantalhuizen, gridWidth, gridDepth, optVar, noChangePar
     # Define grid and place sample
     grid = Grid(gridWidth, gridDepth, aantalhuizen)
     grid.randomPlacements()
-    
+
     newValue = grid.calcTotalValue([])[optVar]
     previousValue = newValue
     #valueDevelopment = [newValue]
@@ -790,7 +793,7 @@ def rotatingRandomSample(aantalhuizen, gridWidth, gridDepth, optVar, noChangePar
 
     i = 0
     noChange = 0
-    
+
     # When over 5000 iterations the change is less than 10 per iteration the
     # loop is terminated
     while noChange < noChangeParam:
@@ -799,7 +802,7 @@ def rotatingRandomSample(aantalhuizen, gridWidth, gridDepth, optVar, noChangePar
         #if i%100==0:
             #print i, previousValue
             #anim.emptyAnimation(grid.buildings)
-            #anim.updateAnimation(grid.buildings, 0)        
+            #anim.updateAnimation(grid.buildings, 0)
 
         # Choose random building
         building = grid.buildings[random.randrange(0, aantalhuizen)]
@@ -809,7 +812,7 @@ def rotatingRandomSample(aantalhuizen, gridWidth, gridDepth, optVar, noChangePar
 
         if valueDif > 0:
             previousValue = newValue
-        
+
         if valueDif < valueDifParam:
             noChange += 1
         else:
@@ -824,7 +827,7 @@ def rotatingRandomSample(aantalhuizen, gridWidth, gridDepth, optVar, noChangePar
 
     #anim.emptyAnimation(grid.buildings)
     #anim.updateAnimation(grid.buildings, 0)
-    
+
     return grid.calcTotalValue([])
 
 
@@ -837,7 +840,7 @@ def rotatingRandomSampleSA(aantalhuizen, gridWidth, gridDepth, lifetime, optVar,
     # Define grid and place sample
     grid = Grid(gridWidth, gridDepth, aantalhuizen)
     grid.randomPlacements()
-    
+
     newValue = grid.calcTotalValue([])[optVar]
     previousValue = newValue
     #valueDevelopment = [newValue]
@@ -847,7 +850,7 @@ def rotatingRandomSampleSA(aantalhuizen, gridWidth, gridDepth, lifetime, optVar,
 
     i = 0
     noChange = 0
-    
+
     # When over 5000 iterations the change is less than 10 per iteration the
     # loop is terminated
     while noChange < noChangeParam:
@@ -856,7 +859,7 @@ def rotatingRandomSampleSA(aantalhuizen, gridWidth, gridDepth, lifetime, optVar,
         #if i%100==0:
             #print i, previousValue
             #anim.emptyAnimation(grid.buildings)
-            #anim.updateAnimation(grid.buildings, 0)        
+            #anim.updateAnimation(grid.buildings, 0)
 
         # Choose random building
         building = grid.buildings[random.randrange(0, aantalhuizen)]
@@ -866,7 +869,7 @@ def rotatingRandomSampleSA(aantalhuizen, gridWidth, gridDepth, lifetime, optVar,
 
         if valueDif > 0:
             previousValue = newValue
-        
+
         if valueDif < valueDifParam:
             noChange += 1
         else:
@@ -881,7 +884,7 @@ def rotatingRandomSampleSA(aantalhuizen, gridWidth, gridDepth, lifetime, optVar,
 
     #anim.emptyAnimation(grid.buildings)
     #anim.updateAnimation(grid.buildings, 0)
-    
+
     return grid.calcTotalValue([])
 
 
@@ -892,7 +895,7 @@ def SAtranslatingRandomSample2(aantalhuizen, gridWidth, gridDepth, optVar, noCha
     # Define grid and place sample
     grid = Grid(gridWidth, gridDepth, aantalhuizen)
     grid.randomPlacements()
-    
+
     newValue = grid.calcTotalValue()[0]
     previousValue = newValue
     #valueDevelopment = [newValue]
@@ -913,7 +916,7 @@ def SAtranslatingRandomSample2(aantalhuizen, gridWidth, gridDepth, optVar, noCha
         #if i%1000==0:
             #print i, previousValue
             #anim.emptyAnimation(grid.buildings)
-            #anim.updateAnimation(grid.buildings, 0)        
+            #anim.updateAnimation(grid.buildings, 0)
 
         # Choose random building
         building = grid.buildings[random.randrange(0, aantalhuizen)]
@@ -923,7 +926,7 @@ def SAtranslatingRandomSample2(aantalhuizen, gridWidth, gridDepth, optVar, noCha
         valueDif = newValue - previousValue
 
         previousValue = newValue
-        
+
         if valueDif < valueDifParam:
             noChange += 1
         else:
@@ -949,7 +952,7 @@ def swappingRandomSample2(aantalhuizen, gridWidth, gridDepth, optVar, noChangePa
     # Define grid and place sample
     grid = Grid(gridWidth, gridDepth, aantalhuizen)
     grid.randomPlacements()
-    
+
     newValue = grid.calcTotalValue()[optVar]
     previousValue = newValue
     #valueDevelopment = [newValue]
@@ -968,23 +971,23 @@ def swappingRandomSample2(aantalhuizen, gridWidth, gridDepth, optVar, noChangePa
         #if i%1000==0:
             #print i, previousValue
             #anim.emptyAnimation(grid.buildings)
-            #anim.updateAnimation(grid.buildings, 0)        
+            #anim.updateAnimation(grid.buildings, 0)
 
         # Choose random building
         building1 = grid.buildings[random.randrange(0, aantalhuizen)]
         building2 = grid.buildings[random.randrange(0, aantalhuizen)]
 
-        
+
         while building1 == building2:
             building2 = grid.buildings[random.randrange(0, aantalhuizen)]
-    
+
         newValue = grid.swapBuildings(building1, building2, previousValue, optVar)
 
         valueDif = newValue - previousValue
 
         if valueDif > 0:
             previousValue = newValue
-        
+
         if valueDif < valueDifParam:
             noChange += 1
         else:
@@ -1010,7 +1013,7 @@ def SAswappingRandomSample2(aantalhuizen, gridWidth, gridDepth, lifetime, optVar
     # Define grid and place sample
     grid = Grid(gridWidth, gridDepth, aantalhuizen)
     grid.randomPlacements()
-    
+
     newValue = grid.calcTotalValue()[optVar]
     previousValue = newValue
     #valueDevelopment = [newValue]
@@ -1029,7 +1032,7 @@ def SAswappingRandomSample2(aantalhuizen, gridWidth, gridDepth, lifetime, optVar
         #if i%1000==0:
             #print i, previousValue
             #anim.emptyAnimation(grid.buildings)
-            #anim.updateAnimation(grid.buildings, 0)        
+            #anim.updateAnimation(grid.buildings, 0)
 
         # Choose random building
         building1 = grid.buildings[random.randrange(0, aantalhuizen)]
@@ -1037,13 +1040,13 @@ def SAswappingRandomSample2(aantalhuizen, gridWidth, gridDepth, lifetime, optVar
 
         while building1 == building2:
             building2 = grid.buildings[random.randrange(0, aantalhuizen)]
-    
+
         newValue = grid.swapBuildingsSA(building1, building2, previousValue, i, lifetime, optVar)
 
         valueDif = newValue - previousValue
 
         previousValue = newValue
-        
+
         if valueDif < valueDifParam:
             noChange += 1
         else:
@@ -1069,7 +1072,7 @@ def combinationRandomSample2(aantalhuizen, gridWidth, gridDepth, optVar, noChang
     # Define grid and place sample
     grid = Grid(gridWidth, gridDepth, aantalhuizen)
     grid.randomPlacements()
-    
+
     newValue = grid.calcTotalValue()[optVar]
     previousValue = newValue
     #valueDevelopment = [newValue]
@@ -1088,20 +1091,20 @@ def combinationRandomSample2(aantalhuizen, gridWidth, gridDepth, optVar, noChang
         #if i%1000==0:
             #print i, previousValue
             #anim.emptyAnimation(grid.buildings)
-            #anim.updateAnimation(grid.buildings, 0)        
+            #anim.updateAnimation(grid.buildings, 0)
 
         # There is chance 0.2 to swap random buildings and 0.8 to translate
         # building
-        if random.random() > 0.8:    
+        if random.random() > 0.8:
             # Choose random building
             building1 = grid.buildings[random.randrange(0, aantalhuizen)]
             building2 = grid.buildings[random.randrange(0, aantalhuizen)]
-    
+
             while building1 == building2:
                 building2 = grid.buildings[random.randrange(0, aantalhuizen)]
-    
+
             newValue = grid.swapBuildings(building1, building2, previousValue, optVar)
-        else: 
+        else:
             # Choose random building
             building = grid.buildings[random.randrange(0, aantalhuizen)]
 
@@ -1111,7 +1114,7 @@ def combinationRandomSample2(aantalhuizen, gridWidth, gridDepth, optVar, noChang
 
         if valueDif > 0:
             previousValue = newValue
-        
+
         if valueDif < valueDifParam:
             noChange += 1
         else:
@@ -1137,7 +1140,7 @@ def combinationRandomSample2SA(aantalhuizen, gridWidth, gridDepth, lifetimeNewPo
     # Define grid and place sample
     grid = Grid(gridWidth, gridDepth, aantalhuizen)
     grid.randomPlacements()
-    
+
     newValue = grid.calcTotalValue([])[optVar]
     previousValue = newValue
     valueDevelopment = [newValue]
@@ -1156,20 +1159,20 @@ def combinationRandomSample2SA(aantalhuizen, gridWidth, gridDepth, lifetimeNewPo
         #if i%1000==0:
             #print i, previousValue
             #anim.emptyAnimation(grid.buildings)
-            #anim.updateAnimation(grid.buildings, 0)        
+            #anim.updateAnimation(grid.buildings, 0)
 
         # There is chance 0.2 to swap random buildings and 0.8 to translate
         # building
-        if random.random() > 0.8:    
+        if random.random() > 0.8:
             # Choose random building
             building1 = grid.buildings[random.randrange(0, aantalhuizen)]
             building2 = grid.buildings[random.randrange(0, aantalhuizen)]
-    
+
             while building1 == building2:
                 building2 = grid.buildings[random.randrange(0, aantalhuizen)]
-    
+
             newValue = grid.swapBuildingsSA(building1, building2, previousValue, i, lifetimeSwap, optVar)
-        else: 
+        else:
             # Choose random building
             building = grid.buildings[random.randrange(0, aantalhuizen)]
 
@@ -1178,7 +1181,7 @@ def combinationRandomSample2SA(aantalhuizen, gridWidth, gridDepth, lifetimeNewPo
         valueDif = newValue - previousValue
 
         previousValue = newValue
-        
+
         if valueDif < valueDifParam:
             noChange += 1
         else:
@@ -1246,7 +1249,7 @@ def translatingRandomSample(aantalhuizen, gridWidth, gridDepth, step, optVar, va
                 down = grid.calcTotalValue()[optVar]
             else:
                 down = -1
-            
+
             building.translate(0, step)
 
             if right > totalPrice or up > totalPrice or left > totalPrice or down > totalPrice:
@@ -1364,6 +1367,7 @@ def geneticAlgorithm(popsize, generations, aantalhuizen, gridWidth, gridDepth, s
 
 
     population = sorted(population, key=itemgetter(1), reverse=True)
+
     anim = GridVisualisation(gridWidth, gridDepth, population[0][0].buildings, population[0][1])
     anim.emptyAnimation(population[0][0].buildings)
 
@@ -1446,69 +1450,187 @@ def createGeneration(popsize, population, aantalhuizen, gridWidth, gridDepth, sc
 
 
 def createCandidate(population, aantalhuizen, gridWidth, gridDepth, return_dict):
-    candidates = []
-    
-    # Pick three random candidates from population.
-    for i in range(3):
-        randomcandidate = random.choice(population)
-        
-        # Candidates can't be the same.
-        while randomcandidate in candidates:
+
+    def create():
+        candidates = []
+
+        # Pick two random candidates from population.
+        for i in range(2):
             randomcandidate = random.choice(population)
 
-        candidates.append(randomcandidate[0])
+            # Candidates can't be the same.
+            while randomcandidate in candidates:
+                randomcandidate = random.choice(population)
 
-#        buildingchoices = ['b', 'e', 'm']
+            candidates.append(randomcandidate[0])
 
-    grid = Grid(gridWidth, gridDepth, aantalhuizen)
+        #
+        # Create crossover.
+        #
 
-    #
-    # Create crossover.
-    #
+        candidate1 = candidates[0]
+        candidate2 = candidates[1]
 
-    # Take one type of house from each candidate, and add to new candidate.
-    # Places house somewhere else if there is overlap.
-    count = 0
-    for candidate in candidates:
-        if count == 0:
-            for building in candidate.buildings:
+        grid = Grid(gridWidth, gridDepth, aantalhuizen)
+
+
+        if aantalhuizen < 40:
+            buildinglist = []
+            for building in candidate1.buildings:
+                if building.y > gridDepth /2:
+                    buildinglist.append(building)
+
+            for building in candidate2.buildings:
+                if building.y < gridDepth /2:
+                    buildinglist.append(building)
+
+            maisons = 0
+            eensgezins = 0
+            bungalows = 0
+
+            # Make sure there are not to many buildings of single type.
+            for building in buildinglist:
+                if building.name[0] == 'm':
+                    if maisons < aantalhuizen * grid.maisons:
+                        grid.addBuilding(building)
+                        maisons += 1
+
+                elif building.name[0] == 'b':
+                    if bungalows < aantalhuizen * grid.bungalows:
+                        grid.addBuilding(building)
+                        bungalows += 1
+
+                elif building.name[0] == 'e':
+                    if eensgezins < aantalhuizen * grid.eensgezins:
+                        grid.addBuilding(building)
+                        eensgezins += 1
+
+            # Add houses if there are too little of a single type.
+            for building in grid.buildings:
+                if building.name[0] == 'm':
+                    if maisons < aantalhuizen * grid.maisons:
+                        extrabuilding = copy.deepcopy(building)
+                        grid.newRandomPosGA(extrabuilding, grid)
+                        buildinglist.append(extrabuilding)
+                        maisons += 1
+
+                elif building.name[0] == 'b':
+                    if bungalows < aantalhuizen * grid.bungalows:
+                        extrabuilding = copy.deepcopy(building)
+                        grid.newRandomPosGA(extrabuilding, grid)
+                        buildinglist.append(extrabuilding)
+                        bungalows += 1
+
+                elif building.name[0] == 'e':
+                    if eensgezins < aantalhuizen * grid.eensgezins:
+                        extrabuilding = copy.deepcopy(building)
+                        grid.newRandomPosGA(extrabuilding, grid)
+                        buildinglist.append(extrabuilding)
+                        eensgezins += 1
+
+            for building in grid.buildings:
+                checkHouse(grid, building)
+
+
+        else:
+            startbuildinglist = []
+            for building in candidate1.buildings:
+                if building.y > gridDepth /2:
+                    startbuildinglist.append(building)
+
+            for building in candidate2.buildings:
+                if building.y < gridDepth /2:
+                    startbuildinglist.append(building)
+
+
+            buildinglist = []
+            maisons = 0
+            eensgezins = 0
+            bungalows = 0
+
+            # Make sure there are not to many buildings of single type.
+            for building in startbuildinglist:
+                if building.name[0] == 'm':
+                    if maisons < aantalhuizen * grid.maisons:
+                        buildinglist.append(building)
+                        maisons += 1
+
+                elif building.name[0] == 'b':
+                    if bungalows < aantalhuizen * grid.bungalows:
+                        buildinglist.append(building)
+                        bungalows += 1
+
+                elif building.name[0] == 'e':
+                    if eensgezins < aantalhuizen * grid.eensgezins:
+                        buildinglist.append(building)
+                        eensgezins += 1
+
+            # Add houses if there are too little of a single type.
+            for building in buildinglist:
+                if building.name[0] == 'm':
+                    if maisons < aantalhuizen * grid.maisons:
+                        extrabuilding = copy.deepcopy(building)
+                        grid.newRandomPosGA(extrabuilding, grid)
+                        buildinglist.append(extrabuilding)
+                        maisons += 1
+
+                elif building.name[0] == 'b':
+                    if bungalows < aantalhuizen * grid.bungalows:
+                        extrabuilding = copy.deepcopy(building)
+                        grid.newRandomPosGA(extrabuilding, grid)
+                        buildinglist.append(extrabuilding)
+                        bungalows += 1
+
+                elif building.name[0] == 'e':
+                    if eensgezins < aantalhuizen * grid.eensgezins:
+                        extrabuilding = copy.deepcopy(building)
+                        grid.newRandomPosGA(extrabuilding, grid)
+                        buildinglist.append(extrabuilding)
+                        eensgezins += 1
+
+            for building in buildinglist:
                 if building.name[0] == 'm':
                     grid.addBuilding(building)
                     checkHouse(grid, building)
 
-        elif count == 1:
-            for building in candidate.buildings:
+            for building in buildinglist:
                 if building.name[0] == 'b':
                     grid.addBuilding(building)
                     checkHouse(grid, building)
 
-        else:
-            for building in candidate.buildings:
+            for building in buildinglist:
                 if building.name[0] == 'e':
                     grid.addBuilding(building)
                     checkHouse(grid, building)
 
-        count += 1
+        #
+        # Mutate the crossover.
+        #
 
-    #
-    # Mutate the crossover.
-    #
 
-    # Choose random amount of mutations.
-    mutations = random.randint(1, aantalhuizen / 5)
+        # Choose random amount of mutations.
+        mutations = random.randint(1, aantalhuizen / 5)
 
-    for i in range(mutations):
-        # Choose a random house to mutate.
-        randombuilding = grid.buildings[random.randrange(0, aantalhuizen)]
+        for i in range(mutations):
+            # Choose a random house to mutate.
+            randombuilding = grid.buildings[random.choice(range(len(grid.buildings)))]
 
-        # Mutate the house by giving it a new position.
-        grid.newRandomPosGA(randombuilding, grid)
+            # Mutate the house by giving it a new position.
+            grid.newRandomPosGA(randombuilding, grid)
 
-        # Change position if it doesn't meet the constraints.
-        checkHouse(grid, randombuilding)
+            # Change position if it doesn't meet the constraints.
+            checkHouse(grid, randombuilding)
+
+        return grid
+
+
+    grid = create()
+
+    # Don't return non-viable candidates
+    while len(grid.buildings) < aantalhuizen:
+        grid = create()
 
     return_dict[grid] = grid
-
 
 def checkHouse(grid, building):
 
@@ -1550,7 +1672,7 @@ class Building(object):
         self.x = x
         self.y = y
     def newAngle(self, angle):
-        # Give a new angle to building        
+        # Give a new angle to building
         self.angle = angle * 2 * math.pi / 360
     def changeShortestDist(self, shortestDist, shortestNeighbor):
         self.shortestDist = shortestDist
@@ -1576,7 +1698,7 @@ class Bungalow(Building):
         self.value = 399000
         self.percentage = .04
         self.vrijstand = 3
-        
+
 class Maison(Building):
     def __init__(self, x, y, angle, gridWidth, gridDepth):
         Building.__init__(self, x, y, angle, gridWidth, gridDepth)
@@ -1590,58 +1712,58 @@ class Maison(Building):
 
 #====================MAIN THREAD ===================================#
 if __name__ == '__main__':
-    
-    precision = 1.0
-    grid = Grid(120, 160, 2)
+
+#    precision = 1.0
+#    grid = Grid(120, 160, 2)
 
 
     # Storing data
-    storeValues = []
-    nrit = 3
+#    storeValues = []
+#    nrit = 3
     # You need to change both this parameter and the function!!
-    algorithm = 'rotatingRandomSample'
-    nrHouses = 5
-    gridWidth = 120
-    gridDepth = 160
-    optVar = 0
-    noChangeParam = 50
-    valueDifParam = 10
-    
-    for i in range(0, nrit):
-        timeBefore = time.clock()
-        value = rotatingRandomSample(nrHouses, gridWidth, gridDepth, optVar, noChangeParam, valueDifParam)
-        timeAfter = time.clock()
+#    algorithm = 'rotatingRandomSample'
+#    nrHouses = 5
+#    gridWidth = 120
+#    gridDepth = 160
+#    optVar = 0
+#    noChangeParam = 50
+#    valueDifParam = 10
 
-        deltaTime = timeAfter - timeBefore
+#    for i in range(0, nrit):
+#        timeBefore = time.clock()
+#        value = rotatingRandomSample(nrHouses, gridWidth, gridDepth, optVar, noChangeParam, valueDifParam)
+#        timeAfter = time.clock()
 
-        storeValues.append([value[0], value[1], deltaTime])
-        
-    existingFile = True
-    j = -1
-    while existingFile:
-        j += 1
-        try:
-            open(algorithm + str(j))
-        except IOError:
-            existingFile = False
+#        deltaTime = timeAfter - timeBefore
 
-    f = open(algorithm + str(j), 'w')
-    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-    f.write('Total price   Total vrijstand   Time elapsed\n')
-    for i in storeValues:
-        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-    f.close()
+#        storeValues.append([value[0], value[1], deltaTime])
 
-        
+#    existingFile = True
+#    j = -1
+#    while existingFile:
+#        j += 1
+#        try:
+#            open(algorithm + str(j))
+#        except IOError:
+#            existingFile = False
 
-##    processes = 5 # Amount of simultaneous processes. Shouldn't exceed popluatie.
-##    precision = 1.0
-##    generaties = 5
-##    populatie = 10
-##    geneticAlgorithm(populatie, generaties, 60, 120, 160, 'v')
+#    f = open(algorithm + str(j), 'w')
+#    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
+#            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
+#            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
+#            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
+#    f.write('Total price   Total vrijstand   Time elapsed\n')
+#    for i in storeValues:
+#        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
+#    f.close()
+
+
+
+    processes = 10 # Amount of simultaneous processes. Shouldn't exceed popluatie.
+    precision = 1.0
+    generaties = 5
+    populatie = 100
+    geneticAlgorithm(populatie, generaties, 20, 120, 160, 'p')
 
 
     #a = translatingRandomSample2(20, 120, 160, 0)
@@ -1660,9 +1782,9 @@ if __name__ == '__main__':
 ##        valueDevelopment.append(a[0])
 ##        grids.append(a[1])
 ##        print i, a[0][-1]
-##        
+##
     #pr.disable()
     #pr.print_stats()
-    
+
     #grid.randomPlacements()
 
