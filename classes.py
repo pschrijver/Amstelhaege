@@ -1199,7 +1199,7 @@ def combinationRandomSample2SA(aantalhuizen, gridWidth, gridDepth, lifetimeNewPo
                 building2 = grid.buildings[random.randrange(0, aantalhuizen)]
 
             newValue = grid.swapBuildingsSA(building1, building2, previousValue, i, lifetimeSwap, optVar)
-            
+
         else:
             # Choose random building
             building = grid.buildings[random.randrange(0, aantalhuizen)]
@@ -1412,37 +1412,30 @@ def createStartPopulation(popsize, aantalhuizen, gridWidth, gridDepth, score):
     poplist = []
 
     while len(poplist) < popsize:
-        manager = Manager()
-        return_dict = manager.dict()
-        jobs = []
 
-        for i in range(processes):
-            p = multiprocessing.Process(target=createRandomCandidate, args=(aantalhuizen, gridWidth, gridDepth, return_dict))
-            jobs.append(p)
-            p.start()
+        grid = createRandomCandidate(aantalhuizen, gridWidth, gridDepth)
 
-        for proc in jobs:
-            proc.join()
 
-        for i in list(return_dict.values()):
-            templist = []
-            templist.append(i)
-            if score == 'p':
-                totalscore = i.calcTotalValue([])[0]
-            elif score == 'v':
-                totalscore = i.calcTotalValue([])[1]
+        templist = []
+        templist.append(grid)
+        if score == 'p':
+            totalscore = grid.calcTotalValue([])[0]
+        elif score == 'v':
+            totalscore = grid.calcTotalValue([])[1]
 
-            templist.append(totalscore)
-            poplist.append(templist)
+        templist.append(totalscore)
+        poplist.append(templist)
 
-        print len(poplist), "random candidates generated."
+        if len(poplist) % 100 == 0:
+            print len(poplist), "random candidates generated."
 
     return poplist
 
-def createRandomCandidate(aantalhuizen, gridWidth, gridDepth, return_dict):
+def createRandomCandidate(aantalhuizen, gridWidth, gridDepth):
     grid = Grid(gridWidth, gridDepth, aantalhuizen)
     grid.randomPlacements()
-    return_dict[grid] = grid
+
+    return grid
 
 
 
@@ -1450,19 +1443,19 @@ def createGeneration(popsize, population, aantalhuizen, gridWidth, gridDepth, sc
     new_pop = []
     # Builds a single candidate every iteration.
     while len(new_pop) < popsize:
-        manager = Manager()
-        return_dict = manager.dict()
-        jobs = []
+        argumentlist = []
+        candidatelist = []
 
         for i in range(processes):
-            p = multiprocessing.Process(target=createCandidate, args=(population, aantalhuizen, gridWidth, gridDepth, return_dict))
-            jobs.append(p)
-            p.start()
+            argumentlist.append([population, aantalhuizen, gridWidth, gridDepth])
 
-        for proc in jobs:
-            proc.join()
+        pool_size = processes
+        pool = multiprocessing.Pool(processes=pool_size)
+        candidatelist = pool.map(createCandidate, argumentlist)
+        pool.close()
+        pool.join()
 
-        for i in list(return_dict.values()):
+        for i in candidatelist:
             templist = []
             templist.append(i)
             if score == 'p':
@@ -1472,13 +1465,19 @@ def createGeneration(popsize, population, aantalhuizen, gridWidth, gridDepth, sc
 
             templist.append(totalscore)
             new_pop.append(templist)
+
         print len(new_pop), "candidates evolved."
 
     return new_pop
 
 
-def createCandidate(population, aantalhuizen, gridWidth, gridDepth, return_dict):
+def createCandidate(data):
 
+    population = data[0]
+    aantalhuizen = data[1]
+    gridWidth = data[2]
+    gridDepth = data[3]
+    count = 0
     def create():
         candidates = []
 
@@ -1653,17 +1652,28 @@ def createCandidate(population, aantalhuizen, gridWidth, gridDepth, return_dict)
 
 
     grid = create()
-
     # Don't return non-viable candidates
     while len(grid.buildings) < aantalhuizen:
         grid = create()
 
-    return_dict[grid] = grid
+    if aantalhuizen == 60:
+        overlap = False
+        for building in grid.buildings:
+            overlap = grid.findOverlap2(building)
+
+        if overlap == True:
+            grid = create()
+
+    return grid
 
 def checkHouse(grid, building):
-
+    count = 0
     while grid.findOverlap2(building) == True:
+        count += 1
         grid.newRandomPosGA(building, grid)
+        if count > 100000:
+            return True
+            break
 
     return True
 
@@ -1741,8 +1751,12 @@ class Maison(Building):
 #====================MAIN THREAD ===================================#
 if __name__ == '__main__':
 
-    precision = 1.0
-#    grid = Grid(120, 160, 2)
+    #processes = 10
+
+    #precision = 1.0
+    #generaties = 5
+    #populatie = 100
+    #geneticAlgorithm(populatie, generaties, 60, 120, 160, 'p')
 
 
     # Storing data
@@ -1787,11 +1801,7 @@ if __name__ == '__main__':
 
 
 
-    #processes = 10 # Amount of simultaneous processes. Shouldn't exceed popluatie.
-    #precision = 1.0
-    #generaties = 5
-    #populatie = 100
-    #geneticAlgorithm(populatie, generaties, 20, 120, 160, 'p')
+
 
 
     #a = translatingRandomSample2(20, 120, 160, 0)
@@ -1801,7 +1811,7 @@ if __name__ == '__main__':
     #b = rotatingRandomSampleSA(20, 120, 160, 2000, 0)
     #c = SAswappingRandomSample2(20, 120, 160, 2000, 0)
     #d = combinationRandomSample2(60, 120, 160, 0)
-    e = combinationRandomSample2SA(20, 120, 160, 2000, 1000, 0, 500, 10)
+ #   e = combinationRandomSample2SA(20, 120, 160, 2000, 1000, 0, 500, 10)
     #pr = cProfile.Profile()
     #pr.enable()
 ##    valueDevelopment = []
