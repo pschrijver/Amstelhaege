@@ -52,6 +52,7 @@ class GridVisualisation:
 ##                                                            fill = "white")
 
         self.updateAnimation(self.buildings, '{:5,.2f}'.format(prijsverb))
+        self.w.postscript(file="map.ps", colormode='color')
                 
     def emptyAnimation(self, buildings):
         self.w.delete('all')
