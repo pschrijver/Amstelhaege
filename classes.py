@@ -1359,6 +1359,7 @@ def translatingRandomSample2(aantalhuizen, gridWidth, gridDepth, optVar, noChang
 
 
 
+
 def geneticAlgorithm(popsize, generations, aantalhuizen, gridWidth, gridDepth, score):
     """
     This function uses a genetic algorithm to produce an 'optimized' map.
@@ -1397,7 +1398,6 @@ def geneticAlgorithm(popsize, generations, aantalhuizen, gridWidth, gridDepth, s
     population = sorted(population, key=itemgetter(1), reverse=True)
 
     anim = GridVisualisation(gridWidth, gridDepth, population[0][0].buildings, population[0][1])
-    anim.emptyAnimation(population[0][0].buildings)
 
     print "########"
     print "Evolution finished"
@@ -1419,9 +1419,9 @@ def createStartPopulation(popsize, aantalhuizen, gridWidth, gridDepth, score):
         templist = []
         templist.append(grid)
         if score == 'p':
-            totalscore = grid.calcTotalValue([])[0]
+            totalscore = grid.calcTotalValue(grid.buildings)[0]
         elif score == 'v':
-            totalscore = grid.calcTotalValue([])[1]
+            totalscore = grid.calcTotalValue(grid.buildings)[1]
 
         templist.append(totalscore)
         poplist.append(templist)
@@ -1443,30 +1443,44 @@ def createGeneration(popsize, population, aantalhuizen, gridWidth, gridDepth, sc
     new_pop = []
     # Builds a single candidate every iteration.
     while len(new_pop) < popsize:
-        argumentlist = []
-        candidatelist = []
+    #    argumentlist = []
+    #    candidatelist = []
 
-        for i in range(processes):
-            argumentlist.append([population, aantalhuizen, gridWidth, gridDepth])
+    #    for i in range(processes):
+    #        argumentlist.append([population, aantalhuizen, gridWidth, gridDepth])
 
-        pool_size = processes
-        pool = multiprocessing.Pool(processes=pool_size)
-        candidatelist = pool.map(createCandidate, argumentlist)
-        pool.close()
-        pool.join()
+    #    pool_size = processes
+    #    pool = multiprocessing.Pool(processes=pool_size)
+    #    candidatelist = pool.map(createCandidate, argumentlist)
+    #    pool.close()
+    #    pool.join()
 
-        for i in candidatelist:
-            templist = []
-            templist.append(i)
-            if score == 'p':
-                totalscore = i.calcTotalValue([])[0]
-            elif score == 'v':
-                totalscore = i.calcTotalValue([])[1]
+    #    for i in candidatelist:
+    #        templist = []
+    #        templist.append(i)
+    #        if score == 'p':
+    #            totalscore = i.calcTotalValue([])[0]
+    #        elif score == 'v':
+    #            totalscore = i.calcTotalValue([])[1]
 
-            templist.append(totalscore)
-            new_pop.append(templist)
+    #        templist.append(totalscore)
+    #        new_pop.append(templist)
 
-        print len(new_pop), "candidates evolved."
+        grid = createCandidate([population, aantalhuizen, gridWidth, gridDepth])
+        templist = []
+        templist.append(grid)
+        if score == 'p':
+            totalscore = grid.calcTotalValue(grid.buildings)[0]
+        elif score == 'v':
+            totalscore = grid.calcTotalValue(grid.buildings)[1]
+
+        templist.append(totalscore)
+        new_pop.append(templist)
+
+
+
+        if len(new_pop) % 100 == 0:
+            print len(new_pop), "candidates evolved."
 
     return new_pop
 
@@ -1678,6 +1692,7 @@ def checkHouse(grid, building):
     return True
 
 
+
 class Building(object):
     def __init__(self, x, y, angle, gridWidth, gridDepth):
         self.x = x
@@ -1753,10 +1768,10 @@ if __name__ == '__main__':
 
     #processes = 10
 
-    #precision = 1.0
-    #generaties = 5
-    #populatie = 100
-    #geneticAlgorithm(populatie, generaties, 60, 120, 160, 'p')
+    precision = 1.0
+    generaties = 20
+    populatie = 500
+    geneticAlgorithm(populatie, generaties, 20, 120, 160, 'p')
 
 
     # Storing data
