@@ -118,10 +118,14 @@ class Grid(object):
     def findOverlap2(self, building):
         """
         Calculates whether a building has overlap with another building on the
-        grid and if the building has a distant > vrijstand from the edges of the
+        grid and if the building has a distance > vrijstand from the edges of the
         grid
+        @param building: building for which overlap with other buildings is checked
+        @return buildingOverlap: boolean (True: building has overlap with other building /
+            False: building has no overlap with other building)
         """
 
+        # Coordinates of all corners of the building
         corners = [(building.x, building.y)]
         corners.append((building.x - building.depth * math.sin(building.angle),
                    building.y + building.depth * math.cos(building.angle)))
@@ -130,23 +134,34 @@ class Grid(object):
         corners.append((building.x + building.width * math.cos(building.angle),
                    building.y + building.width * math.sin(building.angle)))
 
+        # Check whether the building has a distance larger than the mandatory vrijstand
+        # from the edge of the grid
         for x, y in corners:
             if x < building.vrijstand or y < building.vrijstand:
                 return True
             elif x > self.width - building.vrijstand or y > self.depth - building.vrijstand:
                 return True
+
         i = 0
         buildingOverlap = False
 
-        shortestDist = float('inf')
+        shortestDist = float('inf')  # Radius in which the closest building must lie
+
+        # Find an overestimate of the shortest distance to the closest neighbor
+
+        # The diagonal of the building and an overestimate of the diagonal of the
+        # neighboring building must be added to the distance between the corners to
+        # correct for possible rotations of buildings
         diagonal = math.sqrt(building.width**2 + building.depth**2) + math.sqrt(11**2 + 10.5**2)
         for neighbor in self.buildings:
             if neighbor != building:
                 dist = math.sqrt((building.x - neighbor.x)**2 + (building.y - neighbor.y)**2)
                 if dist < shortestDist:
                     shortestDist = dist
+                    
         shortestDist += diagonal
 
+        # Only check for overlap with buildings lying inside the shortestDist radius
         while i < len(self.buildings) and not buildingOverlap:
             dist = math.sqrt((building.x - self.buildings[i].x)**2 + (building.y - self.buildings[i].y)**2)
 
@@ -155,25 +170,29 @@ class Grid(object):
             i += 1
 
         return buildingOverlap
-
-    def vrijstandMuren(self, house1):
-           if house1.x - house1.vrijstand >= 0 and house1.x + house1.vrijstand + house1.width <= self.width and \
-               house1.y - house1.vrijstand >= 0 and house1.y + house1.vrijstand + house1.depth <= self.depth:
-               return True
+    
 
     def findOverlap(self, house1, house2):
-        """ Checks whether house1 and house2 overlap and makes sure there is enough vrijstand """
-        if self.findDistance(house1, house2) >= house1.vrijstand:
-            if self.findDistance(house1, house2) >= house2.vrijstand:
-                return self.cornerInBuilding(house1, house2) or self.cornerInBuilding(house2, house1)
-            else:
-                return True
+        """ Checks whether house1 and house2 overlap and makes sure there is enough vrijstand
+        @param house1: building for which overlap with house2 is checked
+        @param house2: building for which overlap with house1 is checked
+        @return: boolean (True: buildings overlap / False: buildings don't overlap)
+        """
+        # First check whether the houses have enough vrijstand
+        if self.findDistance(house1, house2) >= house1.vrijstand and self.findDistance(house1, house2) >= house2.vrijstand:
+            # findDistance might return False when two buildings lie inside each other, therefore
+            # also check for overlap
+            return self.cornerInBuilding(house1, house2) or self.cornerInBuilding(house2, house1)
         else:
             return True
+
 
     def cornerInBuilding(self, house1, house2):
         """
         Checks whether a corner of house2 lies inside house1
+        @param house1: building for which it is checked whether a corner of house2 lies inside
+        @param house2: building for which it is checked whether a corner lies in house1
+        @return: boolean (True: Corner of house2 lies inside house1 / False: No corners of house2 lie inside house1)
         """
 
         # Coordinates of all corners of house2
@@ -186,16 +205,21 @@ class Grid(object):
                    house2.y + house2.width * math.sin(house2.angle)))
 
         rotCorners = []
-        # rotate all corners by an angle -house1.angle, so that we can work in the
+        # Rotate all corners by an angle -house1.angle, so that we can work in the
         # frame where house1 has angle 0
         for corner in corners:
+            # Change to polar coordinates
             r = math.sqrt((corner[0] - house1.x)**2 + (corner[1] - house1.y)**2)
 
+            # Because the cosine is an even function, we need to add a minus sign
+            # when house2 has a lower value for y
             try:
                 sign = (corner[1] - house1.y) / math.fabs(corner[1] - house1.y)
             except ZeroDivisionError:
                 sign = 1
 
+            # When r = 0, the corner is at the origin, so the x and y coordinates
+            # don't change
             if r != 0:
                 theta =  sign * math.acos((corner[0] - house1.x) / r)
 
@@ -214,10 +238,13 @@ class Grid(object):
         return False
 
     def findDistance(self, building1, building2):
-        """ Searches for the shortest distances between building1 and building2.
-        The minimal required distance between buildings is not subtracted."""
-
-##        assert(self.findOverlap(building1, building2) == False), 'Buildings overlap'
+        """
+        Searches for the shortest distances between building1 and building2.
+        The minimal required distance between buildings is not subtracted.
+        @param building1:
+        @param building2:
+        @return: distance between building1 and building2
+        """
 
         d = [(building1, building2), (building2, building1)]
         distancePerIteration = []
@@ -309,25 +336,33 @@ class Grid(object):
 
     def findShortestDist(self, building):
         """
-        Finds shortest distance from var building to another building. Returns
-        this value
+        Finds shortest distance from building to another building. The new
+        shortest dist and the corresponding neighbor with the shortest dist is
+        stored in the building object.
+        @param building: building for which shortest dist is calculated
         """
 
         # Choose a distance that overestimates any possible distance
         shortestDist = math.sqrt(self.width**2 + self.depth**2)
 
-        # Finds a radius in which the closest building lies
-        maxDist = float('inf')
+        maxDist = float('inf')  # Radius in which the closest building must lie
+
+        # Find an overestimate of the shortest distance to the closest neighbor.
+        
+        # The diagonal of the building and an overestimate of the diagonal of the neighboring building
+        # must be added to the distance between the corners to correct for possible rotations of buildings
         diagonal = math.sqrt(building.width**2 + building.depth**2) + math.sqrt(11**2 + 10.5**2)
+
         for neighbor in self.buildings:
             dist = math.sqrt((building.x - neighbor.x)**2 + (building.y - neighbor.y)**2)
             if dist < maxDist and building != neighbor:
                 maxDist = dist
+
         # Add diagonal to distance between corners to account for rotation and orientation of
         # buildings
         maxDist += diagonal
 
-        # Calculate the distance to all buildings in the maxDist radius
+        # Calculate the distance to all buildings within the maxDist radius
         for neighbor in self.buildings:
             dist = math.sqrt((building.x - neighbor.x)**2 + (building.y - neighbor.y)**2)
 
@@ -342,9 +377,13 @@ class Grid(object):
     def calcValue(self, building):
         """
         Calculate the price of a single house. Returns the price and the vrijstand
+        @param building: building for which the price is calculated
+        @return float(huisprijs): building price
+        @return float(vrijstand): vrijstand of building
         """
         vrijstand = building.shortestDist
         extravrijstand = vrijstand - building.vrijstand
+        
         prijsverb = building.percentage * extravrijstand + 1
         huisprijs = building.value * prijsverb
 
@@ -353,21 +392,27 @@ class Grid(object):
     def calcTotalValue(self, buildingsMoved):
         """
         Calculates the total price for all buildings on the grid and the total
-        vrijstand.
+        vrijstand. Also updates shortest distances and shortest neighbors.
         @param buildingMoved: list of all moved buildings
+        @return totalPrice: total price of the grid
+        @return totalVrijstand: total vrijstand of the grid
         """
         totalPrice = 0
-        totalExtraVrijstand = 0
+        totalVrijstand = 0
 
+        
         noCheck = []
+        # If the building had the moved building as shortest neighbor, the
+        # shortest dist needs to be recalculated. This building can be omitted
+        # in the next loop
         for building in self.buildings:
             if building.getShortestNeighbor() in buildingsMoved:
                 self.findShortestDist(building)
                 noCheck.append(building)
 
-        for building in buildingsMoved:
-            
-            movedShortDist = float('inf')
+        # Searches buildings that have the moved building as closest neighbor now
+        # and calculates the new shortest dist of the moved building
+        for building in buildingsMoved:  
             for posNeighbor in self.buildings:
                 if posNeighbor not in noCheck:
                     dist = self.findDistance(building, posNeighbor)
@@ -375,33 +420,42 @@ class Grid(object):
                     if dist < posNeighbor.shortestDist:
                         posNeighbor.changeShortestDist(dist, building)
 
+            # Find the shortest dist for the moved bu
             self.findShortestDist(building)
 
+        # Calculate the total price and vrijstand for all buildings and add them
         for building in self.buildings:
             priceAndVrijstand = self.calcValue(building)
             totalPrice += priceAndVrijstand[0]
-            totalExtraVrijstand += priceAndVrijstand[1]
+            totalVrijstand += priceAndVrijstand[1]
 
-        return totalPrice, totalExtraVrijstand
+        return totalPrice, totalVrijstand
 
     def randomPlacements(self):
+        """
+        Removes the old configuration (if present) and makes a new randomly filled grid
+        """
+
+        # Empty the current grid
         self.buildings = []
 
         trials = 0
 
-        noConfiguration = True
+        # Boolean variable indicating whether a configuration is found
+        noConfiguration = True  
 
         while noConfiguration:
             self.buildings = []
 
             trials += 1
 
-            #if trials % 1 == 0:
-            #    print trials
-
             overlap = False
             i = 0
             randomTries = 0
+
+            # Starts adding Maisons to the grid, then Bungalows and finally Eengezinswoningen
+            # to give an optimum chance of finding space to place the building. When a new building
+            # does not fit initially, it tries to find a new random position for at most 1000 trials
             while i < self.aantalhuizen and randomTries < 1000:
                 if i < .15 * self.aantalhuizen:
                     ran_x = random.random() * (self.width )
@@ -428,15 +482,12 @@ class Grid(object):
                 else:
                     randomTries += 1
 
+            # When no valid configuration is found noConfiguration stays True, otherwise it switches to False
             noConfiguration = overlap
 
+        # Initialize values for shortestDist and shortestNeighbor for all buildings
         for building in self.buildings:
             self.findShortestDist(building)
-
-        #anim = GridVisualisation(self.width,self.depth, self.buildings, 0)
-        #anim.emptyAnimation(self.buildings)
-        #anim.updateAnimation(self.buildings, 0)
-        #print trials
 
     def newRandomPosGA(self, building, grid):
         newX = random.random() * grid.width
@@ -1805,46 +1856,6 @@ def checkHouse(grid, building):
 
     return True
 
-def storeMap(grid, filename):
-    f = open(filename, 'w')
-    f.write(str(grid.width) + ' ' + str(grid.depth) + '\n')
-
-    for building in grid.buildings:
-        f.write(str(building.getX()) + ' ' + str(building.getY()) + ' ' + str(building.getAngle()) + ' ' + str(building.name) + '\n')
-
-    f.close()
-
-def readMap(filename):
-    f = open(filename, 'r')
-    line = f.readline()[:-1]
-    
-    gridWidth, gridDepth = line.split(' ')
-
-    buildings = []
-    while line != '':
-        line = f.readline()[:-1]
-        buildings.append((line.split(' ')))
-
-    grid = Grid(float(gridWidth), float(gridDepth), len(buildings))
-
-    for building in buildings:
-        if building != ['']:
-        
-            if building[3] == 'eengezinswoning':
-                instant = EengezinsWoning(float(building[0]), float(building[1]), float(building[2]), float(gridWidth), float(gridDepth))
-            elif building[3] == 'bungalow':
-                instant = Bungalow(float(building[0]), float(building[1]), float(building[2]), float(gridWidth), float(gridDepth))
-            elif building[3] == 'maison':
-                instant = Maison(float(building[0]), float(building[1]), float(building[2]), float(gridWidth), float(gridDepth))
-         
-            grid.addBuilding(instant)
-
-    anim = GridVisualisation(float(gridWidth), float(gridDepth), grid.buildings, 0)
-    anim.emptyAnimation(grid.buildings)
-    return grid
-        
-
-
 
 
 class Building(object):
@@ -1921,88 +1932,60 @@ class Maison(Building):
         self.vrijstand = 6
 
 
+def storeMap(grid, filename):
+    """
+    Stores width and depth of a grid and the positions, rotations and types of all buildings on a grid in a file
+    @param grid: an object of type grid
+    @param filename: name for the created file
+    """
+    
+    f = open(filename, 'w')
+    f.write(str(grid.width) + ' ' + str(grid.depth) + '\n')
+
+    for building in grid.buildings:
+        f.write(str(building.getX()) + ' ' + str(building.getY()) + ' ' + str(building.getAngle()) + ' ' + str(building.name) + '\n')
+
+    f.close()
+
+
+def readMap(filename):
+    """
+    Reads files created by function storeMap and returns the corresponding grid. Also makes an animation
+    @param filename: name of the file to read
+    @return: grid stored in the file
+    """
+    f = open(filename, 'r')
+    line = f.readline()[:-1]      # Read the line and remove the '\n' part
+    
+    gridWidth, gridDepth = line.split(' ')
+
+    buildings = []
+    while line != '':
+        line = f.readline()[:-1]
+        buildings.append((line.split(' ')))
+
+    grid = Grid(float(gridWidth), float(gridDepth), len(buildings))
+
+    for building in buildings:
+        if building != ['']:
+            if building[3] == 'eengezinswoning':
+                instant = EengezinsWoning(float(building[0]), float(building[1]), float(building[2]), float(gridWidth), float(gridDepth))
+            elif building[3] == 'bungalow':
+                instant = Bungalow(float(building[0]), float(building[1]), float(building[2]), float(gridWidth), float(gridDepth))
+            elif building[3] == 'maison':
+                instant = Maison(float(building[0]), float(building[1]), float(building[2]), float(gridWidth), float(gridDepth))
+         
+            grid.addBuilding(instant)
+
+    anim = GridVisualisation(float(gridWidth), float(gridDepth), grid.buildings, 0)
+    anim.emptyAnimation(grid.buildings)
+    
+    return grid
+
 
 #====================MAIN THREAD ===================================#
 if __name__ == '__main__':
-<<<<<<< HEAD
-    
-    precision = 1.0
-=======
 
-    #processes = 10
-
-    precision = 1.0
-    generaties = 20
-    populatie = 500
-    geneticAlgorithm(populatie, generaties, 20, 120, 160, 'p')
-
-
-    # Storing data
-#    storeValues = []
-#    nrit = 3
-    # You need to change both this parameter and the function!!
-#    algorithm = 'rotatingRandomSample'
-#    nrHouses = 5
-#    gridWidth = 120
-#    gridDepth = 160
-#    optVar = 0
-#    noChangeParam = 50
-#    valueDifParam = 10
-
-#    for i in range(0, nrit):
-#        timeBefore = time.clock()
-#        value = rotatingRandomSample(nrHouses, gridWidth, gridDepth, optVar, noChangeParam, valueDifParam)
-#        timeAfter = time.clock()
-
-#        deltaTime = timeAfter - timeBefore
-
-#        storeValues.append([value[0], value[1], deltaTime])
-
-#    existingFile = True
-#    j = -1
-#    while existingFile:
-#        j += 1
-#        try:
-#            open(algorithm + str(j))
-#        except IOError:
-#            existingFile = False
-
-#    f = open(algorithm + str(j), 'w')
-#    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-#            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-#            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-#            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-#    f.write('Total price   Total vrijstand   Time elapsed\n')
-#    for i in storeValues:
-#        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-#    f.close()
-
-
-
-
-
-
-    #a = translatingRandomSample2(20, 120, 160, 0)
-    #b = SAtranslatingRandomSample2(60, 120, 160,0, 2000, 0)
-    #b = rotatingRandomSample(20, 120, 160, 0, 5000, 10)
-    #rotatingRandomSampleSA(20, 120, 160, 2000, 0, 200, 10)
-    #b = rotatingRandomSampleSA(20, 120, 160, 2000, 0)
-    #c = SAswappingRandomSample2(20, 120, 160, 2000, 0)
-    #d = combinationRandomSample2(60, 120, 160, 0)
- #   e = combinationRandomSample2SA(20, 120, 160, 2000, 1000, 0, 500, 10)
-    #pr = cProfile.Profile()
-    #pr.enable()
-##    valueDevelopment = []
-##    grids = []
-##    for i in range(0,100):
-##        a = combinationRandomSample2SA(20, 120, 160, 0.5)
-##        valueDevelopment.append(a[0])
-##        grids.append(a[1])
-##        print i, a[0][-1]
-##
-    #pr.disable()
-    #pr.print_stats()
->>>>>>> origin/master
 
     #grid = Grid(120, 160, 5)
     #grid.randomPlacements()
