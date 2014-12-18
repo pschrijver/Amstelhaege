@@ -46,13 +46,12 @@ if __name__ == '__main__':
     generations = 100
     # Population size
     population = 500
-	# Choose kind of optimization
+    # Choose kind of optimization
 	# 'p' is for price optimization, 'v' for vrijstand.
-	optimise = 'p'
-	
+    optimise = 'p'
 
     # UNCOMMENT TO RUN GENETIC ALGORITHM
-    #geneticAlgorithm(population, generations, houses, gridWidth, gridDepth, optimise)
+    geneticAlgorithm(population, generations, houses, gridWidth, gridDepth, optimise)
 
     ### End ###
 
