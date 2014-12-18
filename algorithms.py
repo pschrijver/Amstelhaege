@@ -160,6 +160,79 @@ def combinationRandomSampleSA(aantalhuizen, gridWidth, gridDepth, lifetimeNewPos
 
     return grid.calcTotalValue([])
 
+def combinationRandomSampleSARotSwapTrans(aantalhuizen, gridWidth, gridDepth, lifetimeNewPos, lifetimeSwap, optVar, noChangeParam, valueDifParam):
+    """
+    Uses a simulated annealing algorithm, uses the operations: Rotation, Swapping and Translating
+    """
+    print "Starting simulated annealing algorithm with rotation..."
+    # Define grid and place sample
+    grid = Grid(gridWidth, gridDepth, aantalhuizen)
+    grid.randomPlacements()
+
+    newValue = grid.calcTotalValue([])[optVar]
+    previousValue = newValue
+    valueDevelopment = [newValue]
+
+    anim = GridVisualisation(gridWidth, gridDepth, grid.buildings, 0)
+    anim.emptyAnimation(grid.buildings)
+
+    i = 0
+    noChange = 0
+
+    # When over 5000 iterations the change is less than 10 per iteration the
+    # loop is terminated
+    while noChange < noChangeParam:
+
+        # Makes animation for every 1000th iteration
+        if i%1000==0:
+            print "Current iteration = ", i, "with value = ",previousValue
+            anim.emptyAnimation(grid.buildings)
+            anim.updateAnimation(grid.buildings, 0)
+
+        randomc = random.random()
+        # There is chance 0.2 to swap random buildings and 0.8 to translate
+        # building
+        if randomc > 0.85:
+            # Choose random building
+            building1 = grid.buildings[random.randrange(0, aantalhuizen)]
+            building2 = grid.buildings[random.randrange(0, aantalhuizen)]
+
+            while building1 == building2:
+                building2 = grid.buildings[random.randrange(0, aantalhuizen)]
+
+            newValue = grid.swapBuildingsSA(building1, building2, previousValue, i, lifetimeSwap, optVar)
+
+        if randomc > 0.75 and randomc <= 0.85:
+            # Choose random building
+            building = grid.buildings[random.randrange(0, aantalhuizen)]
+            newValue = grid.newRandomRotSA(building, previousValue, i, lifetimeSwap, optVar)
+
+        else:
+            # Choose random building
+            building = grid.buildings[random.randrange(0, aantalhuizen)]
+
+            newValue = grid.newTranslatedPosSA(building, previousValue, i, lifetimeNewPos, optVar)
+
+        valueDif = newValue - previousValue
+
+        previousValue = newValue
+
+        if valueDif < valueDifParam:
+            noChange += 1
+        else:
+            noChange = 0
+
+        #valueDevelopment.append(previousValue)
+        i += 1
+
+    #iterations = [x for x in xrange(len(valueDevelopment))]
+    #plt.plot(iterations, valueDevelopment)
+    #plt.show()
+
+    anim.emptyAnimation(grid.buildings)
+    anim.updateAnimation(grid.buildings, 0)
+
+    return grid.calcTotalValue([]), grid.buildings
 
 def rotatingRandomSample(aantalhuizen, gridWidth, gridDepth, optVar, noChangeParam, valueDifParam):
     """
@@ -216,6 +289,7 @@ def rotatingRandomSample(aantalhuizen, gridWidth, gridDepth, optVar, noChangePar
     #anim.updateAnimation(grid.buildings, 0)
 
     return grid.calcTotalValue([]) + (grid,)
+
 
 
 def rotatingRandomSampleSA(aantalhuizen, gridWidth, gridDepth, lifetime, optVar, noChangeParam, valueDifParam):

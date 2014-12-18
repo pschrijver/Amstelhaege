@@ -19,7 +19,7 @@ if __name__ == '__main__':
     # Depth of the building site.
     gridDepth = 160
     # Amount of houses
-    houses = 60
+    houses = 20
     # Precision of house placement
     precision = 1.0
 
@@ -72,7 +72,7 @@ if __name__ == '__main__':
 
 
 
-    ### Simulated Annealing Algorithm ###
+    ### Simulated Annealing Algorithms ###
 
     # How many times no significant improvement may occur
     noChangeParam = 20000
@@ -88,5 +88,9 @@ if __name__ == '__main__':
     optVar = 0
 
     # UNCOMMENT TO RUN SIMULATED ANNEALING
-    combinationRandomSampleSA(houses, gridWidth, gridDepth, lifetimeNewPos, lifetimeSwap, optVar, noChangeParam, valueDifParam)
+    # Uses translating and swapping
+    #combinationRandomSampleSA(houses, gridWidth, gridDepth, lifetimeNewPos, lifetimeSwap, optVar, noChangeParam, valueDifParam)
+
+    # Uses rotation, swapping and translation
+    #combinationRandomSampleSARotSwapTrans(houses, gridWidth, gridDepth, lifetimeNewPos, lifetimeSwap, optVar, noChangeParam, valueDifParam)
    
