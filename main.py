@@ -9,6 +9,7 @@
 
 
 from algorithms import *
+from buildings import *
 
 if __name__ == '__main__':
     # Define precision of movements
@@ -19,16 +20,24 @@ if __name__ == '__main__':
     gridDepth = 160
     # Amount of houses
     houses = 60
+    # Precision of house placement
+    precision = 1.0
 
 
-
+    
     ### Random solution. ###
 
-    grid = Grid(gridWidth, gridDepth, house)
-    grid.randomPlacements()
+    #UNCOMMENT THIS SECTION TO RUN A RANDOM PLACEMENT
+    
+    #grid = Grid(gridWidth, gridDepth, houses)
+    #grid.randomPlacements()
 
     # Visualize map with score: price.
     #GridVisualisation(gridWidth, gridDepth, grid.buildings, grid.calcTotalValue(grid.buildings)[0])
+
+    ### End ###
+    
+
 
 
     ### Run Genetic algorithm. ###
@@ -38,5 +47,46 @@ if __name__ == '__main__':
     # Population size
     population = 5000
 
-    # Uncomment to run
+    # UNCOMMENT TO RUN GENETIC ALGORITHM
     #geneticAlgorithm(population, generations, houses, gridWidth, gridDepth, 'v')
+
+    ### End ###
+
+
+
+
+    ### Hill Climbing Algorithm ###
+
+    # How many times no significant improvement may occur
+    noChangeParam = 10000
+
+    # Below this param is considered an insignificant improvement
+    valueDifParam = 1000
+
+    # Choose optVar (0 = Price, 1 = Vrijstand)
+    optVar = 0
+    
+    # UNCOMMENT TO RUN HILL CLIMBING ALGORITHM
+    #combinationRandomSample(houses, gridWidth, gridDepth, optVar, noChangeParam, valueDifParam)
+
+
+
+
+    ### Simulated Annealing Algorithm ###
+
+    # How many times no significant improvement may occur
+    noChangeParam = 20000
+
+    # Below this param is considered an insignificant improvement
+    valueDifParam = 1000
+
+    # Simulated Annealing Temperatures
+    lifetimeNewPos = 400000000
+    lifetimeSwap = 200000000
+
+    # Choose optVar (0 = Price, 1 = Vrijstand)
+    optVar = 0
+
+    # UNCOMMENT TO RUN SIMULATED ANNEALING
+    combinationRandomSampleSA(houses, gridWidth, gridDepth, lifetimeNewPos, lifetimeSwap, optVar, noChangeParam, valueDifParam)
+   
