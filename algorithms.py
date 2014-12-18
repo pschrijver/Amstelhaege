@@ -20,9 +20,6 @@ import sys
 import codecs
 import errno
 import cStringIO
-import multiprocessing
-from multiprocessing import Manager
-import copy
 
 class GridVisualisation:
 
