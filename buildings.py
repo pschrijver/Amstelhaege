@@ -1,3 +1,5 @@
+# Authors: Patrick Vlaar, Casper Broertjes and Paul Schrijver.
+
 import math
 
 class Building(object):

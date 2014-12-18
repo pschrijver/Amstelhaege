@@ -43,12 +43,16 @@ if __name__ == '__main__':
     ### Run Genetic algorithm. ###
 
     # Amount of generations
-    generations = 500
+    generations = 100
     # Population size
-    population = 5000
+    population = 500
+	# Choose kind of optimization
+	# 'p' is for price optimization, 'v' for vrijstand.
+	optimise = 'p'
+	
 
     # UNCOMMENT TO RUN GENETIC ALGORITHM
-    #geneticAlgorithm(population, generations, houses, gridWidth, gridDepth, 'v')
+    #geneticAlgorithm(population, generations, houses, gridWidth, gridDepth, optimise)
 
     ### End ###
 
@@ -69,7 +73,7 @@ if __name__ == '__main__':
     # UNCOMMENT TO RUN HILL CLIMBING ALGORITHM
     #combinationRandomSample(houses, gridWidth, gridDepth, optVar, noChangeParam, valueDifParam)
 
-
+	### End ###
 
 
     ### Simulated Annealing Algorithms ###
@@ -93,4 +97,6 @@ if __name__ == '__main__':
 
     # Uses rotation, swapping and translation
     #combinationRandomSampleSARotSwapTrans(houses, gridWidth, gridDepth, lifetimeNewPos, lifetimeSwap, optVar, noChangeParam, valueDifParam)
+	
+	### End ###
    

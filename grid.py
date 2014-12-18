@@ -1,3 +1,5 @@
+# Authors: Patrick Vlaar, Casper Broertjes and Paul Schrijver.
+
 from buildings import *
 from visualisation import *
 

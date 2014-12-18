@@ -1,12 +1,5 @@
 # Authors: Patrick Vlaar, Casper Broertjes and Paul Schrijver.
 
-# This software has been written to solve the 'AmstelHeage' case.
-# http://wiki.phoib.net/wiki/index.php?title=Amstelhaege
-
-# This code has been tested with both Python 2.7 and Pypy 2.4.0.
-# For best performance it is recommended to use Pypy.
-# http://pypy.org/download.html
-
 from buildings import *
 from visualisation import *
 from grid import *

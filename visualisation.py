@@ -1,3 +1,5 @@
+# Authors: Patrick Vlaar, Casper Broertjes and Paul Schrijver.
+
 from Tkinter import *
 import math
 import time
