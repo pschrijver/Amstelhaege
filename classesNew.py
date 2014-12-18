@@ -1698,6 +1698,9 @@ def createCrossover(population, aantalhuizen, gridWidth, gridDepth):
     currentcandidate = False
     coattempt = 0
 
+    # A broken crossover will be returned if repair fails.
+    # This candiate will be automatically discarded in next fitness selection.
+
     while currentcandidate == False and coattempt < 10:
         coattempt += 1
 
@@ -1723,6 +1726,7 @@ def createCrossover(population, aantalhuizen, gridWidth, gridDepth):
 
         stop = False
 
+        # Add buildings from first candidate.
         for building in candidate1.buildings:
             if building.y > gridDepth /2:
                 if building.name[0] == 'm' and maison < aantalhuizen * grid.maisons:
@@ -1739,6 +1743,7 @@ def createCrossover(population, aantalhuizen, gridWidth, gridDepth):
                     newbuilding = EengezinsWoning(building.x, building.y, building.angle, grid.width, grid.depth)
                     grid.addBuilding(newbuilding)
 
+        # Add buildings from second candiate.
         for building in candidate2.buildings:
             if building.y < gridDepth /2:
                 attempts = 0
@@ -1788,6 +1793,8 @@ def createCrossover(population, aantalhuizen, gridWidth, gridDepth):
 
         stop = False
 
+
+        # Add missing buildings.
         while maison < aantalhuizen * grid.maisons:
             maison += 1
             ran_x = random.random() * (grid.width )
@@ -1833,6 +1840,8 @@ def createCrossover(population, aantalhuizen, gridWidth, gridDepth):
                     stop = True
                     break
 
+
+        # Try again if crossover failed.
         if stop == True:
             currentcandidate = False
         else:
