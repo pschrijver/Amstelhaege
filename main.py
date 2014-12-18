@@ -51,7 +51,7 @@ if __name__ == '__main__':
     optimise = 'p'
 
     # UNCOMMENT TO RUN GENETIC ALGORITHM
-    geneticAlgorithm(population, generations, houses, gridWidth, gridDepth, optimise)
+    #geneticAlgorithm(population, generations, houses, gridWidth, gridDepth, optimise)
 
     ### End ###
 
