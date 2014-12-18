@@ -2059,15 +2059,5 @@ def readMap(filename):
     return grid
 
 
-#====================MAIN THREAD ===================================#
-if __name__ == '__main__':
-    None
 
-    #grid = Grid(120, 160, 5)
-    #grid.randomPlacements()
-    #print grid.calcTotalValue([])
-
-    #a = combinationRandomSample2(20,120,160,0,200,10)
-    #storeMap(a[2], 'test6')
-    #storeMap(grid, 'test')
 
