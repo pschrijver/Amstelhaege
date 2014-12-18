@@ -490,11 +490,16 @@ class Grid(object):
             self.findShortestDist(building)
 
     def newRandomPosGA(self, building, grid):
+        """
+        Assigns a random position to a building.
+        :param building: Building.
+        :param grid:  Map
+        :return: none.
+        """
         newX = random.random() * grid.width
         newY = random.random() * grid.depth
         building.newPosition(newX, newY)
-        newAngle = random.random() * 360
-        building.newAngle(newAngle)
+
 
     def newRandomPos(self, building, previousValue, optVar):
         """
@@ -1538,16 +1543,17 @@ def geneticAlgorithm(popsize, generations, aantalhuizen, gridWidth, gridDepth, s
     :return: List containing final population, sorted on score from high to low.
     """
 
+    filename = score + str(aantalhuizen)
     gencount = 0
 
     while gencount < generations:
 
-        # Creating starting situation.
+        # Create starting situation.
         if gencount == 0:
             population = createStartPopulation(popsize, aantalhuizen, gridWidth, gridDepth, score)
             print "Starting evolution..."
 
-        # Sort by value (high to low).
+        # Sort population by fitness (score from high to low).
         population = sorted(population, key=itemgetter(1), reverse=True)
 
         # Select fittest 50%.
@@ -1559,10 +1565,14 @@ def geneticAlgorithm(popsize, generations, aantalhuizen, gridWidth, gridDepth, s
         gencount += 1
         print "This is generation", gencount
 
-
+    # Sort final population.
     population = sorted(population, key=itemgetter(1), reverse=True)
 
-    anim = GridVisualisation(gridWidth, gridDepth, population[0][0].buildings, population[0][1])
+    # Visualize best candidate.
+    GridVisualisation(gridWidth, gridDepth, population[0][0].buildings, population[0][1])
+
+    # Store best candidate.
+    storeMap(population[0][0], filename)
 
     print "########"
     print "Evolution finished"
@@ -1572,7 +1582,17 @@ def geneticAlgorithm(popsize, generations, aantalhuizen, gridWidth, gridDepth, s
 
 
 def createStartPopulation(popsize, aantalhuizen, gridWidth, gridDepth, score):
-    # Create initial population.
+    """
+    Creates initial population.
+    :param int popsize: Size of population.
+    :param int aantalhuizen: Amount of buildings in a candidate
+    :param int gridWidth: Width of the candidate.
+    :param int gridDepth: Depth of candidate
+    :param str score: Kind of score that should be optimized.
+            'v' = optimal vrijstand. 'p' = optimal price.
+    :return: list containing population
+    """
+
     print 'Generating start state...'
     poplist = []
 
@@ -1580,9 +1600,9 @@ def createStartPopulation(popsize, aantalhuizen, gridWidth, gridDepth, score):
 
         grid = createRandomCandidate(aantalhuizen, gridWidth, gridDepth)
 
-
         templist = []
         templist.append(grid)
+
         if score == 'p':
             totalscore = grid.calcTotalValue(grid.buildings)[0]
         elif score == 'v':
@@ -1593,45 +1613,36 @@ def createStartPopulation(popsize, aantalhuizen, gridWidth, gridDepth, score):
 
         if len(poplist) % 100 == 0:
             print len(poplist), "random candidates generated."
-
     return poplist
 
 def createRandomCandidate(aantalhuizen, gridWidth, gridDepth):
+    """
+    Creates a single random candidate.
+    :param int aantalhuizen: Amount of buildings in a candidate
+    :param int gridWidth: Width of the candidate.
+    :param int gridDepth: Depth of candidate
+    :return: grid, contains a random candidate.
+    """
     grid = Grid(gridWidth, gridDepth, aantalhuizen)
     grid.randomPlacements()
-
     return grid
 
-
-
 def createGeneration(popsize, population, aantalhuizen, gridWidth, gridDepth, score):
+    """
+    Creates a generation of the size that was chosen as initial population size.
+    :param int popsize: Size of population.
+    :param list population: List containing candidates.
+    :param int aantalhuizen: Amount of buildings in a candidate
+    :param int gridWidth: Width of the candidate.
+    :param int gridDepth: Depth of candidate
+    :param str score: Kind of score that should be optimized.
+            'v' = optimal vrijstand. 'p' = optimal price.
+    :return: returns a list containing new population
+    """
     new_pop = []
     # Builds a single candidate every iteration.
     while len(new_pop) < popsize:
-    #    argumentlist = []
-    #    candidatelist = []
-
-    #    for i in range(processes):
-    #        argumentlist.append([population, aantalhuizen, gridWidth, gridDepth])
-
-    #    pool_size = processes
-    #    pool = multiprocessing.Pool(processes=pool_size)
-    #    candidatelist = pool.map(createCandidate, argumentlist)
-    #    pool.close()
-    #    pool.join()
-
-    #    for i in candidatelist:
-    #        templist = []
-    #        templist.append(i)
-    #        if score == 'p':
-    #            totalscore = i.calcTotalValue([])[0]
-    #        elif score == 'v':
-    #            totalscore = i.calcTotalValue([])[1]
-
-    #        templist.append(totalscore)
-    #        new_pop.append(templist)
-
-        grid = createCandidate([population, aantalhuizen, gridWidth, gridDepth])
+        grid = createCandidate(population, aantalhuizen, gridWidth, gridDepth, score)
         templist = []
         templist.append(grid)
         if score == 'p':
@@ -1642,24 +1653,55 @@ def createGeneration(popsize, population, aantalhuizen, gridWidth, gridDepth, sc
         templist.append(totalscore)
         new_pop.append(templist)
 
-
-
         if len(new_pop) % 100 == 0:
             print len(new_pop), "candidates evolved."
 
     return new_pop
 
 
-def createCandidate(data):
+def createCandidate(population, aantalhuizen, gridWidth, gridDepth, score):
+    """
+    Creates a single candidate (crosover with mutation).
+    :param list population: List containing candidates.
+    :param int aantalhuizen: Amount of buildings in a candidate
+    :param int gridWidth: Width of the candidate.
+    :param int gridDepth: Depth of candidate
+    :param str score: Kind of score that should be optimized.
+            'v' = optimal vrijstand. 'p' = optimal price.
+    :return: returns a single candidate.
+    """
+    # Create a crossover.
+    grid = createCrossover(population, aantalhuizen, gridWidth, gridDepth)
 
-    population = data[0]
-    aantalhuizen = data[1]
-    gridWidth = data[2]
-    gridDepth = data[3]
-    count = 0
-    def create():
+    for building in grid.buildings:
+        grid.findShortestDist(building)
+
+    # Fully random mutation of crossover.
+    #grid = mutatecandidate(aantalhuizen, grid)
+
+    # Hillclimb random mutation.
+    grid = mutatecandidateHC(aantalhuizen, grid, score)
+
+    return grid
+
+
+
+def createCrossover(population, aantalhuizen, gridWidth, gridDepth):
+    """
+    Creates a crossover.
+    :param list population: List containing candidates.
+    :param int aantalhuizen: Amount of buildings in a candidate
+    :param int gridWidth: Width of the candidate.
+    :param int gridDepth: Depth of candidate
+    :return: returns single candidate.
+    """
+    currentcandidate = False
+    coattempt = 0
+
+    while currentcandidate == False and coattempt < 10:
+        coattempt += 1
+
         candidates = []
-
         # Pick two random candidates from population.
         for i in range(2):
             randomcandidate = random.choice(population)
@@ -1670,191 +1712,216 @@ def createCandidate(data):
 
             candidates.append(randomcandidate[0])
 
-        #
-        # Create crossover.
-        #
-
         candidate1 = candidates[0]
         candidate2 = candidates[1]
 
         grid = Grid(gridWidth, gridDepth, aantalhuizen)
 
+        maison = 0
+        bungalow = 0
+        eensgezins = 0
 
-        if aantalhuizen < 40:
-            buildinglist = []
-            for building in candidate1.buildings:
-                if building.y > gridDepth /2:
-                    buildinglist.append(building)
+        stop = False
 
-            for building in candidate2.buildings:
-                if building.y < gridDepth /2:
-                    buildinglist.append(building)
+        for building in candidate1.buildings:
+            if building.y > gridDepth /2:
+                if building.name[0] == 'm' and maison < aantalhuizen * grid.maisons:
+                    maison += 1
+                    #grid.addBuilding(building)
+                    newbuilding = Maison(building.x, building.y, building.angle, grid.width, grid.depth)
+                    grid.addBuilding(newbuilding)
+                if building.name[0] == 'b' and bungalow < aantalhuizen * grid.bungalows:
+                    bungalow += 1
+                    newbuilding = Bungalow(building.x, building.y, building.angle, grid.width, grid.depth)
+                    grid.addBuilding(newbuilding)
+                if building.name[0] == 'e' and eensgezins < aantalhuizen * grid.eensgezins:
+                    eensgezins += 1
+                    newbuilding = EengezinsWoning(building.x, building.y, building.angle, grid.width, grid.depth)
+                    grid.addBuilding(newbuilding)
 
-            maisons = 0
-            eensgezins = 0
-            bungalows = 0
+        for building in candidate2.buildings:
+            if building.y < gridDepth /2:
+                attempts = 0
+                if building.name[0] == 'm' and maison < aantalhuizen * grid.maisons:
+                    maison += 1
+                    newbuilding = Maison(building.x, building.y, building.angle, grid.width, grid.depth)
+                    grid.addBuilding(newbuilding)
 
-            # Make sure there are not to many buildings of single type.
-            for building in buildinglist:
-                if building.name[0] == 'm':
-                    if maisons < aantalhuizen * grid.maisons:
-                        grid.addBuilding(building)
-                        maisons += 1
-
-                elif building.name[0] == 'b':
-                    if bungalows < aantalhuizen * grid.bungalows:
-                        grid.addBuilding(building)
-                        bungalows += 1
-
-                elif building.name[0] == 'e':
-                    if eensgezins < aantalhuizen * grid.eensgezins:
-                        grid.addBuilding(building)
-                        eensgezins += 1
-
-            # Add houses if there are too little of a single type.
-            for building in grid.buildings:
-                if building.name[0] == 'm':
-                    if maisons < aantalhuizen * grid.maisons:
-                        extrabuilding = copy.deepcopy(building)
-                        grid.newRandomPosGA(extrabuilding, grid)
-                        buildinglist.append(extrabuilding)
-                        maisons += 1
-
-                elif building.name[0] == 'b':
-                    if bungalows < aantalhuizen * grid.bungalows:
-                        extrabuilding = copy.deepcopy(building)
-                        grid.newRandomPosGA(extrabuilding, grid)
-                        buildinglist.append(extrabuilding)
-                        bungalows += 1
-
-                elif building.name[0] == 'e':
-                    if eensgezins < aantalhuizen * grid.eensgezins:
-                        extrabuilding = copy.deepcopy(building)
-                        grid.newRandomPosGA(extrabuilding, grid)
-                        buildinglist.append(extrabuilding)
-                        eensgezins += 1
-
-            for building in grid.buildings:
-                checkHouse(grid, building)
+                    while grid.findOverlap2(newbuilding) == True:
+                        grid.newRandomPosGA(newbuilding, grid)
+                        attempts += 1
+                        if attempts > 1000:
+                            stop = True
+                            break
 
 
+                attempts = 0
+                if building.name[0] == 'b' and bungalow < aantalhuizen * grid.bungalows:
+                    bungalow += 1
+                    newbuilding = Bungalow(building.x, building.y, building.angle, grid.width, grid.depth)
+                    grid.addBuilding(newbuilding)
+
+                    while grid.findOverlap2(newbuilding) == True:
+                        grid.newRandomPosGA(newbuilding, grid)
+                        attempts += 1
+                        if attempts > 1000:
+                            stop = True
+                            break
+
+
+                attempts = 0
+                if building.name[0] == 'e' and eensgezins < aantalhuizen * grid.eensgezins:
+                    eensgezins += 1
+                    #grid.addBuilding(building)
+                    newbuilding = EengezinsWoning(building.x, building.y, building.angle, grid.width, grid.depth)
+                    grid.addBuilding(newbuilding)
+
+                    while grid.findOverlap2(newbuilding) == True:
+                        grid.newRandomPosGA(newbuilding, grid)
+                        attempts += 1
+                        if attempts > 1000:
+                            stop = True
+                            break
+
+                if stop == True:
+                    break
+
+        stop = False
+
+        while maison < aantalhuizen * grid.maisons:
+            maison += 1
+            ran_x = random.random() * (grid.width )
+            ran_y = random.random() * (grid.depth )
+            ran_angle = 0 #random.randrange(0,360)
+            building = Maison(ran_x, ran_y, ran_angle, grid.width, grid.depth)
+            grid.addBuilding(building)
+            attempts = 0
+            while grid.findOverlap2(building) == True:
+                grid.newRandomPosGA(building, grid)
+                attempts += 1
+                if attempts > 1000:
+                    stop = True
+                    break
+
+        while bungalow < aantalhuizen * grid.bungalows:
+            bungalow += 1
+            ran_x = random.random() * (grid.width )
+            ran_y = random.random() * (grid.depth )
+            ran_angle = 0 #random.randrange(0,360)
+            building = Bungalow(ran_x, ran_y, ran_angle, grid.width, grid.depth)
+            grid.addBuilding(building)
+            attempts = 0
+            while grid.findOverlap2(building) == True:
+                grid.newRandomPosGA(building, grid)
+                attempts += 1
+                if attempts > 1000:
+                    stop = True
+                    break
+
+        while eensgezins < aantalhuizen * grid.eensgezins:
+            eensgezins += 1
+            ran_x = random.random() * (grid.width )
+            ran_y = random.random() * (grid.depth )
+            ran_angle = 0 #random.randrange(0,360)
+            building = EengezinsWoning(ran_x, ran_y, ran_angle, grid.width, grid.depth)
+            grid.addBuilding(building)
+            attempts = 0
+            while grid.findOverlap2(building) == True:
+                grid.newRandomPosGA(building, grid)
+                attempts += 1
+                if attempts > 1000:
+                    stop = True
+                    break
+
+        if stop == True:
+            currentcandidate = False
         else:
-            startbuildinglist = []
-            for building in candidate1.buildings:
-                if building.y > gridDepth /2:
-                    startbuildinglist.append(building)
-
-            for building in candidate2.buildings:
-                if building.y < gridDepth /2:
-                    startbuildinglist.append(building)
-
-
-            buildinglist = []
-            maisons = 0
-            eensgezins = 0
-            bungalows = 0
-
-            # Make sure there are not to many buildings of single type.
-            for building in startbuildinglist:
-                if building.name[0] == 'm':
-                    if maisons < aantalhuizen * grid.maisons:
-                        buildinglist.append(building)
-                        maisons += 1
-
-                elif building.name[0] == 'b':
-                    if bungalows < aantalhuizen * grid.bungalows:
-                        buildinglist.append(building)
-                        bungalows += 1
-
-                elif building.name[0] == 'e':
-                    if eensgezins < aantalhuizen * grid.eensgezins:
-                        buildinglist.append(building)
-                        eensgezins += 1
-
-            # Add houses if there are too little of a single type.
-            for building in buildinglist:
-                if building.name[0] == 'm':
-                    if maisons < aantalhuizen * grid.maisons:
-                        extrabuilding = copy.deepcopy(building)
-                        grid.newRandomPosGA(extrabuilding, grid)
-                        buildinglist.append(extrabuilding)
-                        maisons += 1
-
-                elif building.name[0] == 'b':
-                    if bungalows < aantalhuizen * grid.bungalows:
-                        extrabuilding = copy.deepcopy(building)
-                        grid.newRandomPosGA(extrabuilding, grid)
-                        buildinglist.append(extrabuilding)
-                        bungalows += 1
-
-                elif building.name[0] == 'e':
-                    if eensgezins < aantalhuizen * grid.eensgezins:
-                        extrabuilding = copy.deepcopy(building)
-                        grid.newRandomPosGA(extrabuilding, grid)
-                        buildinglist.append(extrabuilding)
-                        eensgezins += 1
-
-            for building in buildinglist:
-                if building.name[0] == 'm':
-                    grid.addBuilding(building)
-                    checkHouse(grid, building)
-
-            for building in buildinglist:
-                if building.name[0] == 'b':
-                    grid.addBuilding(building)
-                    checkHouse(grid, building)
-
-            for building in buildinglist:
-                if building.name[0] == 'e':
-                    grid.addBuilding(building)
-                    checkHouse(grid, building)
-
-        #
-        # Mutate the crossover.
-        #
-
-
-        # Choose random amount of mutations.
-        mutations = random.randint(1, aantalhuizen / 5)
-
-        for i in range(mutations):
-            # Choose a random house to mutate.
-            randombuilding = grid.buildings[random.choice(range(len(grid.buildings)))]
-
-            # Mutate the house by giving it a new position.
-            grid.newRandomPosGA(randombuilding, grid)
-
-            # Change position if it doesn't meet the constraints.
-            checkHouse(grid, randombuilding)
-
-        return grid
-
-
-    grid = create()
-    # Don't return non-viable candidates
-    while len(grid.buildings) < aantalhuizen:
-        grid = create()
-
-    if aantalhuizen == 60:
-        overlap = False
-        for building in grid.buildings:
-            overlap = grid.findOverlap2(building)
-
-        if overlap == True:
-            grid = create()
+            currentcandidate = True
 
     return grid
 
-def checkHouse(grid, building):
-    count = 0
-    while grid.findOverlap2(building) == True:
-        count += 1
-        grid.newRandomPosGA(building, grid)
-        if count > 100000:
-            return True
-            break
 
-    return True
+def mutatecandidate(aantalhuizen, grid):
+    """
+    Random mutation of candidate.
+    :param int aantalhuizen: Amount of buildings in a candidate
+    :param grid: object containing candidate
+    :return: object containing mutated candidate
+    """
+    # Choose random amount of mutations.
+    mutations = random.randint(1, aantalhuizen / 5)
+
+    for i in range(mutations):
+        # Choose a random house to mutate.
+        randombuilding = grid.buildings[random.choice(range(len(grid.buildings)))]
+
+        # Mutate the house by giving it a new position.
+        grid.newRandomPosGA(randombuilding, grid)
+
+        # Change position if it doesn't meet the constraints.
+        while grid.findOverlap2(randombuilding) == True:
+            grid.newRandomPosGA(randombuilding, grid)
+
+    return grid
+
+def mutatecandidateHC(aantalhuizen, grid, score):
+    """
+    Random mutation of candidate with hill climbing.
+    :param int aantalhuizen: Amount of buildings in a candidate
+    :param grid: object containing candidate
+    :param str score: Kind of score that should be optimized.
+            'v' = optimal vrijstand. 'p' = optimal price.
+    :return: object containing mutated candidate
+    """
+    if score == 'p':
+        grid = HillClimberGA(grid, 0, 10, 200, aantalhuizen)
+    elif score == 'v':
+        grid = HillClimberGA(grid, 1, 10, 200, aantalhuizen)
+
+    return grid
+
+
+def HillClimberGA(grid, optVar, noChangeParam, valueDifParam, aantalhuizen):
+    """
+    Uses hillclimber algorithm to find local optimal solution. Uses swapping.
+    """
+    newValue = grid.calcTotalValue([])[optVar]
+    previousValue = newValue
+
+    i = 0
+    noChange = 0
+
+    # When over chosen amount of iterations the change is less than chosen
+    # amount per iteration the loop is terminated.
+    while noChange < noChangeParam:
+        # There is chance 0.2 to swap random buildings and 0.8 to translate
+        # building
+        if random.random() > 0.8:
+            # Choose random building
+            building1 = grid.buildings[random.randrange(0, aantalhuizen)]
+            building2 = grid.buildings[random.randrange(0, aantalhuizen)]
+
+            while building1 == building2:
+                building2 = grid.buildings[random.randrange(0, aantalhuizen)]
+
+            newValue = grid.swapBuildings(building1, building2, previousValue, optVar)
+        else:
+            # Choose random building
+            building = grid.buildings[random.randrange(0, aantalhuizen)]
+
+            newValue = grid.newTranslatedPos(building, previousValue, optVar)
+
+        valueDif = newValue - previousValue
+
+        if valueDif > 0:
+            previousValue = newValue
+
+        if valueDif < valueDifParam:
+            noChange += 1
+        else:
+            noChange = 0
+        i += 1
+    return grid
 
 
 
@@ -1985,2246 +2052,13 @@ def readMap(filename):
 
 #====================MAIN THREAD ===================================#
 if __name__ == '__main__':
-
+    None
 
     #grid = Grid(120, 160, 5)
     #grid.randomPlacements()
     #print grid.calcTotalValue([])
 
-    a = combinationRandomSample2(20,120,160,0,200,10)
-    storeMap(a[2], 'test6')
+    #a = combinationRandomSample2(20,120,160,0,200,10)
+    #storeMap(a[2], 'test6')
     #storeMap(grid, 'test')
-    
-    #grid.append(Maison(34,54,33,120,160))
-    
 
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'rotatingRandomSample20Price'
-##    nrHouses = 20
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 0
-##    noChangeParam = 6000
-##    valueDifParam = 10
-##    highest = 0
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = rotatingRandomSample(nrHouses, gridWidth, gridDepth, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'rotatingRandomSample40Price'
-##    nrHouses = 40
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 0
-##    noChangeParam = 6000
-##    valueDifParam = 10
-##    highest = 0
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = rotatingRandomSample(nrHouses, gridWidth, gridDepth, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'rotatingRandomSample60Price'
-##    nrHouses = 60
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 0
-##    noChangeParam = 6000
-##    valueDifParam = 10
-##    highest = 0
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = rotatingRandomSample(nrHouses, gridWidth, gridDepth, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'rotatingRandomSample20Value'
-##    nrHouses = 20
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 1
-##    noChangeParam = 6000
-##    valueDifParam = 10
-##    highest = 0
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = rotatingRandomSample(nrHouses, gridWidth, gridDepth, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'rotatingRandomSample40Value'
-##    nrHouses = 40
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 1
-##    noChangeParam = 6000
-##    valueDifParam = 10
-##    highest = 0
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = rotatingRandomSample(nrHouses, gridWidth, gridDepth, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'rotatingRandomSample60Value'
-##    nrHouses = 60
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 1
-##    noChangeParam = 6000
-##    valueDifParam = 10
-##    highest = 0
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = rotatingRandomSample(nrHouses, gridWidth, gridDepth, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'rotatingRandomSampleSA20Price'
-##    nrHouses = 20
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 0
-##    noChangeParam = 6000
-##    valueDifParam = 10
-##    highest = 0
-##    lifetime = 500000
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = rotatingRandomSampleSA(nrHouses, gridWidth, gridDepth, lifetime, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'rotatingRandomSampleSA40Price'
-##    nrHouses = 40
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 0
-##    noChangeParam = 6000
-##    valueDifParam = 10
-##    highest = 0
-##    lifetime = 500000
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = rotatingRandomSampleSA(nrHouses, gridWidth, gridDepth, lifetime, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'rotatingRandomSampleSA60Price'
-##    nrHouses = 60
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 0
-##    noChangeParam = 6000
-##    valueDifParam = 10
-##    highest = 0
-##    lifetime = 500000
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = rotatingRandomSampleSA(nrHouses, gridWidth, gridDepth, lifetime, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'rotatingRandomSampleSA20Value'
-##    nrHouses = 20
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 1
-##    noChangeParam = 6000
-##    valueDifParam = 10
-##    highest = 0
-##    lifetime = 500000
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = rotatingRandomSampleSA(nrHouses, gridWidth, gridDepth, lifetime, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'rotatingRandomSampleSA40Value'
-##    nrHouses = 40
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 1
-##    noChangeParam = 6000
-##    valueDifParam = 10
-##    highest = 0
-##    lifetime = 500000
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = rotatingRandomSampleSA(nrHouses, gridWidth, gridDepth, lifetime, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'rotatingRandomSampleSA60Value'
-##    nrHouses = 60
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 1
-##    noChangeParam = 6000
-##    valueDifParam = 10
-##    highest = 0
-##    lifetime = 500000
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = rotatingRandomSampleSA(nrHouses, gridWidth, gridDepth, lifetime, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'swappingRandomSample20Price'
-##    nrHouses = 20
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 0
-##    noChangeParam = 3000
-##    valueDifParam = 10
-##    highest = 0
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = swappingRandomSample2(nrHouses, gridWidth, gridDepth, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'swappingRandomSample40Price'
-##    nrHouses = 40
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 0
-##    noChangeParam = 3000
-##    valueDifParam = 10
-##    highest = 0
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = swappingRandomSample2(nrHouses, gridWidth, gridDepth, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'swappingRandomSample60Price'
-##    nrHouses = 60
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 0
-##    noChangeParam = 3000
-##    valueDifParam = 10
-##    highest = 0
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = swappingRandomSample2(nrHouses, gridWidth, gridDepth, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'swappingRandomSample20Value'
-##    nrHouses = 20
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 1
-##    noChangeParam = 3000
-##    valueDifParam = 10
-##    highest = 0
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = swappingRandomSample2(nrHouses, gridWidth, gridDepth, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'swappingRandomSample40Value'
-##    nrHouses = 40
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 1
-##    noChangeParam = 3000
-##    valueDifParam = 10
-##    highest = 0
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = swappingRandomSample2(nrHouses, gridWidth, gridDepth, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'swappingRandomSample60Value'
-##    nrHouses = 60
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 1
-##    noChangeParam = 3000
-##    valueDifParam = 10
-##    highest = 0
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = swappingRandomSample2(nrHouses, gridWidth, gridDepth, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'swappingRandomSampleSA20Price'
-##    nrHouses = 20
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 0
-##    noChangeParam = 3000
-##    valueDifParam = 10
-##    highest = 0
-##    lifetime = 500000
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = SAswappingRandomSample2(nrHouses, gridWidth, gridDepth, lifetime, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'swappingRandomSampleSA40Price'
-##    nrHouses = 40
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 0
-##    noChangeParam = 3000
-##    valueDifParam = 10
-##    highest = 0
-##    lifetime = 500000
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = SAswappingRandomSample2(nrHouses, gridWidth, gridDepth, lifetime, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'swappingRandomSampleSA60Price'
-##    nrHouses = 60
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 0
-##    noChangeParam = 3000
-##    valueDifParam = 10
-##    highest = 0
-##    lifetime = 500000
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = SAswappingRandomSample2(nrHouses, gridWidth, gridDepth, lifetime, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'swappingRandomSampleSA20Value'
-##    nrHouses = 20
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 1
-##    noChangeParam = 3000
-##    valueDifParam = 10
-##    highest = 0
-##    lifetime = 500000
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = SAswappingRandomSample2(nrHouses, gridWidth, gridDepth, lifetime, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'swappingRandomSampleSA40Value'
-##    nrHouses = 40
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 1
-##    noChangeParam = 3000
-##    valueDifParam = 10
-##    highest = 0
-##    lifetime = 500000
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = SAswappingRandomSample2(nrHouses, gridWidth, gridDepth, lifetime, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'swappingRandomSampleSA60Value'
-##    nrHouses = 60
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 1
-##    noChangeParam = 3000
-##    valueDifParam = 10
-##    highest = 0
-##    lifetime = 500000
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = SAswappingRandomSample2(nrHouses, gridWidth, gridDepth, lifetime, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'translatingRandomSample20Price'
-##    nrHouses = 20
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 0
-##    noChangeParam = 15000
-##    valueDifParam = 10
-##    highest = 0
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = translatingRandomSample2(nrHouses, gridWidth, gridDepth, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'translatingRandomSample40Price'
-##    nrHouses = 40
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 0
-##    noChangeParam = 15000
-##    valueDifParam = 10
-##    highest = 0
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = translatingRandomSample2(nrHouses, gridWidth, gridDepth, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'translatingRandomSample60Price'
-##    nrHouses = 60
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 0
-##    noChangeParam = 15000
-##    valueDifParam = 10
-##    highest = 0
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = translatingRandomSample2(nrHouses, gridWidth, gridDepth, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'translatingRandomSample20Value'
-##    nrHouses = 20
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 1
-##    noChangeParam = 15000
-##    valueDifParam = 10
-##    highest = 0
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = translatingRandomSample2(nrHouses, gridWidth, gridDepth, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'translatingRandomSample40Value'
-##    nrHouses = 40
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 1
-##    noChangeParam = 15000
-##    valueDifParam = 10
-##    highest = 0
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = translatingRandomSample2(nrHouses, gridWidth, gridDepth, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-####            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-####    f.write('Total price   Total vrijstand   Time elapsed\n')
-####    for i in storeValues:
-####        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-####    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'translatingRandomSample60Value'
-##    nrHouses = 60
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 1
-##    noChangeParam = 15000
-##    valueDifParam = 10
-##    highest = 0
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        
-##        value = translatingRandomSample2(nrHouses, gridWidth, gridDepth, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'SAtranslatingRandomSample20Price'
-##    nrHouses = 20
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 0
-##    noChangeParam = 15000
-##    valueDifParam = 10
-##    highest = 0
-##    lifetime = 500000
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = SAtranslatingRandomSample2(nrHouses, gridWidth, gridDepth, optVar, lifetime, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'SAtranslatingRandomSample40Price'
-##    nrHouses = 40
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 0
-##    noChangeParam = 15000
-##    valueDifParam = 10
-##    highest = 0
-##    lifetime = 500000
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = SAtranslatingRandomSample2(nrHouses, gridWidth, gridDepth, optVar, lifetime, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'SAtranslatingRandomSample60Price'
-##    nrHouses = 60
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 0
-##    noChangeParam = 15000
-##    valueDifParam = 10
-##    highest = 0
-##    lifetime = 500000
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = SAtranslatingRandomSample2(nrHouses, gridWidth, gridDepth, optVar, lifetime, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'SAtranslatingRandomSample20Value'
-##    nrHouses = 20
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 1
-##    noChangeParam = 15000
-##    valueDifParam = 10
-##    highest = 0
-##    lifetime = 500000
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = SAtranslatingRandomSample2(nrHouses, gridWidth, gridDepth, optVar, lifetime, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'SAtranslatingRandomSample40Value'
-##    nrHouses = 40
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 1
-##    noChangeParam = 15000
-##    valueDifParam = 10
-##    highest = 0
-##    lifetime = 500000
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = SAtranslatingRandomSample2(nrHouses, gridWidth, gridDepth, optVar, lifetime, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = 'SAtranslatingRandomSample60Value'
-##    nrHouses = 60
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 1
-##    noChangeParam = 15000
-##    valueDifParam = 10
-##    highest = 0
-##    lifetime = 500000
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = SAtranslatingRandomSample2(nrHouses, gridWidth, gridDepth, optVar, lifetime, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = '3translatingRandomSample20Price'
-##    nrHouses = 20
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 0
-##    noChangeParam = 15000
-##    valueDifParam = 10
-##    highest = 0
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = translatingRandomSample3(nrHouses, gridWidth, gridDepth, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = '3translatingRandomSample40Price'
-##    nrHouses = 40
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 0
-##    noChangeParam = 15000
-##    valueDifParam = 10
-##    highest = 0
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = translatingRandomSample3(nrHouses, gridWidth, gridDepth, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = '3translatingRandomSample60Price'
-##    nrHouses = 60
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 0
-##    noChangeParam = 15000
-##    valueDifParam = 10
-##    highest = 0
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = translatingRandomSample3(nrHouses, gridWidth, gridDepth, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = '3translatingRandomSample20Value'
-##    nrHouses = 20
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 1
-##    noChangeParam = 15000
-##    valueDifParam = 10
-##    highest = 0
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = translatingRandomSample3(nrHouses, gridWidth, gridDepth, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = '3translatingRandomSample40Value'
-##    nrHouses = 40
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 1
-##    noChangeParam = 15000
-##    valueDifParam = 10
-##    highest = 0
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = translatingRandomSample3(nrHouses, gridWidth, gridDepth, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = '3translatingRandomSample60Value'
-##    nrHouses = 60
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 1
-##    noChangeParam = 15000
-##    valueDifParam = 10
-##    highest = 0
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = translatingRandomSample3(nrHouses, gridWidth, gridDepth, optVar, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = '3translatingRandomSampleSA20Price'
-##    nrHouses = 20
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 0
-##    noChangeParam = 15000
-##    valueDifParam = 10
-##    highest = 0
-##    lifetime = 500000
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = SAtranslatingRandomSample3(nrHouses, gridWidth, gridDepth, optVar, lifetime, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = '3translatingRandomSampleSA40Price'
-##    nrHouses = 40
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 0
-##    noChangeParam = 15000
-##    valueDifParam = 10
-##    highest = 0
-##    lifetime = 500000
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = SAtranslatingRandomSample3(nrHouses, gridWidth, gridDepth, optVar, lifetime, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##    
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = '3translatingRandomSampleSA60Price'
-##    nrHouses = 60
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 0
-##    noChangeParam = 15000
-##    valueDifParam = 10
-##    highest = 0
-##    lifetime = 500000
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = SAtranslatingRandomSample3(nrHouses, gridWidth, gridDepth, optVar, lifetime, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = '3translatingRandomSampleSA20Value'
-##    nrHouses = 20
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 1
-##    noChangeParam = 15000
-##    valueDifParam = 10
-##    highest = 0
-##    lifetime = 500000
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = SAtranslatingRandomSample3(nrHouses, gridWidth, gridDepth, optVar, lifetime, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = '3translatingRandomSampleSA40Value'
-##    nrHouses = 40
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 1
-##    noChangeParam = 15000
-##    valueDifParam = 10
-##    highest = 0
-##    lifetime = 500000
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = SAtranslatingRandomSample3(nrHouses, gridWidth, gridDepth, optVar, lifetime, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    # Storing data
-##    storeValues = []
-##    nrit = 5
-##    # You need to change both this parameter and the function!!
-##    algorithm = '3translatingRandomSampleSA60Value'
-##    nrHouses = 60
-##    gridWidth = 120
-##    gridDepth = 160
-##    optVar = 1
-##    noChangeParam = 15000
-##    valueDifParam = 10
-##    highest = 0
-##    lifetime = 500000
-##
-##    existingFile = True
-##    j = -1
-##    while existingFile:
-##        j += 1
-##        try:
-##            open(algorithm + str(j))
-##        except IOError:
-##            existingFile = False
-##
-##    for i in range(0, nrit):
-##        timeBefore = time.clock()
-##        value = SAtranslatingRandomSample3(nrHouses, gridWidth, gridDepth, optVar, lifetime, noChangeParam, valueDifParam)
-##        timeAfter = time.clock()
-##
-##        deltaTime = timeAfter - timeBefore
-##
-##        storeValues.append([value[0], value[1], deltaTime])
-##
-##        if value[optVar] > highest:
-##            storeMap(value[2], algorithm + str(j) + 'bestMap')
-##            highest = value[optVar]
-##            
-##    f = open(algorithm + str(j), 'w')
-##    f.write(str(nrit) + ' iterations of algorithm ' + algorithm + ' for ' + \
-##            str(nrHouses) + ' houses and a grid width and depth of ' + str(gridWidth) + \
-##            ' and ' + str(gridDepth) + ' respectively. For optimization variable ' + \
-##            str(optVar) + '. The value of the noChangeParam is ' + str(noChangeParam) + ' and the valueDifParam is ' + str(valueDifParam) + '\n')
-##    f.write('Total price   Total vrijstand   Time elapsed\n')
-##    for i in storeValues:
-##        f.write(str(i[0]) + '   ' + str(i[1]) + '   ' + str(i[2]) + '\n')
-##    f.close()
-##
-##    #translatingRandomSample3(aantalhuizen, gridWidth, gridDepth, optVar, noChangeParam, valueDifParam)
-##    #rotatingRandomSampleSA(aantalhuizen, gridWidth, gridDepth, lifetime, optVar, noChangeParam, valueDifParam)
-##    #processes = 10 # Amount of simultaneous processes. Shouldn't exceed popluatie.
-##    #precision = 1.0
-##    #generaties = 5
-##    #populatie = 100
-##    #geneticAlgorithm(populatie, generaties, 20, 120, 160, 'p')
-##
-##
-##    #a = translatingRandomSample2(20, 120, 160, 0)
-##    #b = SAtranslatingRandomSample2(60, 120, 160,0, 2000, 0)
-##    #b = rotatingRandomSample(20, 120, 160, 0, 10000, 10)
-##    #rotatingRandomSampleSA(20, 120, 160, 2000, 0, 200, 10)
-##    #c = swappingRandomSample2(20, 120, 160, 0, 10000, 10)
-##    #b = rotatingRandomSampleSA(20, 120, 160, 500000, 0, 6000, 10)
-##    #rotatingRandomSampleSA(aantalhuizen, gridWidth, gridDepth, lifetime, optVar, noChangeParam, valueDifParam)
-##    
-##    #c = SAswappingRandomSample2(20, 120, 160, 500000,0,10000,10)
-##    #d = combinationRandomSample2(60, 120, 160, 0)
-##    #e = combinationRandomSample2SA(20, 120, 160, 2000, 1000, 0, 500, 10)
-##    #f = combinationRandomSample2(20, 120, 160, 0, 2000, 10)
-##    #g = combinationRandomSample2SA(20, 120, 160, 20000, 10000, 0, 10000, 10)
-##
-##    #e = translatingRandomSample2(20, 120, 160, 0, 15000, 10)
-##    #f = SAtranslatingRandomSample2(20, 120, 160, 0, 500000, 15000, 10)
-##    #f = SAtranslatingRandomSample3(20,120,160,0,500000,15000,10)
-##    #translatingRandomSample3(20,120,160,0,20000,10)
-##
-##    #pr = cProfile.Profile()
-##    #pr.enable()
-####    valueDevelopment = []
-####    grids = []
-####    for i in range(0,100):
-####        a = combinationRandomSample2SA(20, 120, 160, 0.5)
-####        valueDevelopment.append(a[0])
-####        grids.append(a[1])
-####        print i, a[0][-1]
-####
-##    #pr.disable()
-##    #pr.print_stats()
-##
-##    #grid.randomPlacements()
-##
-##
